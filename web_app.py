@@ -235,7 +235,7 @@ LOGIN_TEMPLATE = """
 """
 
 # ============================================================================
-# MAIN PAGE TEMPLATE (same as before, just added logout button)
+# MAIN PAGE TEMPLATE
 # ============================================================================
 
 PAGE_TEMPLATE = """
@@ -338,6 +338,10 @@ PAGE_TEMPLATE = """
             background: var(--primary);
             transform: translateY(-2px);
             box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+        }
+        
+        #current-user-avatar {
+            font-size: 1.3em;
         }
         
         .logout-btn {
@@ -620,6 +624,93 @@ PAGE_TEMPLATE = """
         
         .books-grid.cozy .book-content {
             padding: 20px;
+        }
+        
+        /* List View for Mobile */
+        .books-grid.list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .books-grid.list .book-card {
+            display: flex;
+            flex-direction: row;
+            border-radius: 12px;
+            overflow: visible;
+            max-height: 140px;
+        }
+        
+        .books-grid.list .book-thumbnail {
+            width: 90px;
+            min-width: 90px;
+            height: 140px;
+            border-radius: 12px 0 0 12px;
+        }
+        
+        .books-grid.list .book-content {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .books-grid.list .book-title {
+            font-size: 1em;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .books-grid.list .book-author {
+            font-size: 0.85em;
+            margin-bottom: 4px;
+        }
+        
+        .books-grid.list .book-publish-date,
+        .books-grid.list .book-summary,
+        .books-grid.list .read-more,
+        .books-grid.list .book-awards,
+        .books-grid.list .expand-genres-btn {
+            display: none;
+        }
+        
+        .books-grid.list .book-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 6px;
+        }
+        
+        .books-grid.list .badge {
+            font-size: 0.65em;
+            padding: 2px 6px;
+        }
+        
+        .books-grid.list .genres-container.collapsed .badge-genre:nth-child(n+3) {
+            display: none;
+        }
+        
+        .books-grid.list .book-footer {
+            padding-top: 0;
+            border-top: none;
+            font-size: 0.75em;
+            margin-top: auto;
+        }
+        
+        .books-grid.list .book-actions {
+            display: none;
+        }
+        
+        .books-grid.list .read-badge {
+            top: 6px;
+            right: 6px;
+            font-size: 0.65em;
+            padding: 4px 8px;
         }
         
         .book-card {
@@ -1115,6 +1206,35 @@ PAGE_TEMPLATE = """
             font-size: 1.1em;
         }
         
+        /* Avatar Emoji Picker */
+        .emoji-picker {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .emoji-option {
+            font-size: 2.5em;
+            cursor: pointer;
+            text-align: center;
+            padding: 12px;
+            border-radius: 12px;
+            background: var(--surface-light);
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .emoji-option:hover {
+            background: var(--primary);
+            transform: scale(1.1);
+        }
+        
+        .emoji-option.selected {
+            background: var(--primary);
+            border-color: var(--accent);
+        }
+        
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -1143,6 +1263,10 @@ PAGE_TEMPLATE = """
                 gap: 16px;
             }
             
+            .books-grid.list {
+                gap: 12px;
+            }
+            
             .stats {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -1160,6 +1284,16 @@ PAGE_TEMPLATE = """
                 width: 100%;
                 justify-content: space-between;
             }
+            
+            .emoji-picker {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+            }
+            
+            .emoji-option {
+                font-size: 2em;
+                padding: 8px;
+            }
         }
     </style>
 </head>
@@ -1170,7 +1304,7 @@ PAGE_TEMPLATE = """
                 <h1>📚 Book Tracker</h1>
                 <div class="header-actions">
                     <div class="user-badge" onclick="openModal('profile-modal')" id="current-user-badge">
-                        👤 <span id="current-user-name">Set Your Name</span>
+                        <span id="current-user-avatar">👤</span> <span id="current-user-name">Set Your Name</span>
                     </div>
                     <a href="/logout" class="logout-btn">
                         🚪 Logout
@@ -1211,6 +1345,9 @@ PAGE_TEMPLATE = """
                     </button>
                     <button class="view-density-btn" data-density="compact" title="Compact View">
                         <span>▪</span>
+                    </button>
+                    <button class="view-density-btn" data-density="list" title="List View (Mobile)">
+                        <span>☰</span>
                     </button>
                     <button class="clear-filters-btn" onclick="clearAllFilters()">Clear All</button>
                 </div>
@@ -1434,11 +1571,41 @@ PAGE_TEMPLATE = """
             </div>
             <form id="profile-form">
                 <div class="form-group">
+                    <label>Choose Your Avatar</label>
+                    <div class="emoji-picker">
+                        <div class="emoji-option" data-emoji="🐶">🐶</div>
+                        <div class="emoji-option" data-emoji="🐱">🐱</div>
+                        <div class="emoji-option" data-emoji="🐭">🐭</div>
+                        <div class="emoji-option" data-emoji="🐹">🐹</div>
+                        <div class="emoji-option" data-emoji="🐰">🐰</div>
+                        <div class="emoji-option" data-emoji="🦊">🦊</div>
+                        <div class="emoji-option" data-emoji="🐻">🐻</div>
+                        <div class="emoji-option" data-emoji="🐼">🐼</div>
+                        <div class="emoji-option" data-emoji="🐨">🐨</div>
+                        <div class="emoji-option" data-emoji="🐯">🐯</div>
+                        <div class="emoji-option" data-emoji="🦁">🦁</div>
+                        <div class="emoji-option" data-emoji="🐮">🐮</div>
+                        <div class="emoji-option" data-emoji="🐷">🐷</div>
+                        <div class="emoji-option" data-emoji="🐸">🐸</div>
+                        <div class="emoji-option" data-emoji="🐵">🐵</div>
+                        <div class="emoji-option" data-emoji="🐔">🐔</div>
+                        <div class="emoji-option" data-emoji="🐧">🐧</div>
+                        <div class="emoji-option" data-emoji="🐦">🐦</div>
+                        <div class="emoji-option" data-emoji="🦆">🦆</div>
+                        <div class="emoji-option" data-emoji="🦉">🦉</div>
+                        <div class="emoji-option" data-emoji="🦄">🦄</div>
+                        <div class="emoji-option" data-emoji="🐝">🐝</div>
+                        <div class="emoji-option" data-emoji="🦋">🦋</div>
+                        <div class="emoji-option" data-emoji="🐌">🐌</div>
+                    </div>
+                    <input type="hidden" id="selected-avatar" value="👤">
+                </div>
+                <div class="form-group">
                     <label>Your Name</label>
                     <input type="text" id="profile-name" placeholder="Enter your name" required>
                 </div>
                 <div class="form-group">
-                    <button type="submit" class="btn camera-btn">Save Name</button>
+                    <button type="submit" class="btn camera-btn">Save Profile</button>
                 </div>
             </form>
         </div>
@@ -1751,7 +1918,6 @@ PAGE_TEMPLATE = """
                         if (!result.success) {
                             console.error('Failed to add book:', result.error);
                             alert(`Failed to add book ${i + 1}: ${result.error}`);
-                            // Continue with next book
                         } else {
                             console.log(`Book ${i + 1} added successfully:`, result.book_id);
                         }
@@ -1813,38 +1979,63 @@ PAGE_TEMPLATE = """
             });
         });
         
-        // User name
-        function updateUserName() {
+        // Avatar emoji selection
+        document.querySelectorAll('.emoji-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.emoji-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                document.getElementById('selected-avatar').value = this.dataset.emoji;
+            });
+        });
+        
+        // User profile with avatar
+        function updateUserProfile() {
             const savedName = localStorage.getItem('bookTrackerUserName');
+            const savedAvatar = localStorage.getItem('bookTrackerUserAvatar') || '👤';
+            
             if (savedName) {
                 const els = [
-                    {el: document.getElementById('current-user-name'), isInput: false},
-                    {el: document.getElementById('user-name'), isInput: true},
-                    {el: document.getElementById('read-by-name'), isInput: true},
-                    {el: document.getElementById('profile-name'), isInput: true}
+                    {el: document.getElementById('current-user-name'), isInput: false, isAvatar: false},
+                    {el: document.getElementById('current-user-avatar'), isInput: false, isAvatar: true},
+                    {el: document.getElementById('user-name'), isInput: true, isAvatar: false},
+                    {el: document.getElementById('read-by-name'), isInput: true, isAvatar: false},
+                    {el: document.getElementById('profile-name'), isInput: true, isAvatar: false}
                 ];
+                
                 els.forEach(item => {
                     if (item.el) {
-                        if (item.isInput) {
+                        if (item.isAvatar) {
+                            item.el.textContent = savedAvatar;
+                        } else if (item.isInput) {
                             item.el.value = savedName;
                         } else {
                             item.el.textContent = savedName;
                         }
                     }
                 });
+                
+                // Set selected avatar in picker
+                const selectedOption = document.querySelector(`.emoji-option[data-emoji="${savedAvatar}"]`);
+                if (selectedOption) {
+                    selectedOption.classList.add('selected');
+                    document.getElementById('selected-avatar').value = savedAvatar;
+                }
             }
         }
         
-        updateUserName();
+        updateUserProfile();
         
         const profileForm = document.getElementById('profile-form');
         if (profileForm) {
             profileForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const name = document.getElementById('profile-name').value.trim();
+                const avatar = document.getElementById('selected-avatar').value || '👤';
+                
                 if (name) {
                     localStorage.setItem('bookTrackerUserName', name);
-                    updateUserName();
+                    localStorage.setItem('bookTrackerUserAvatar', avatar);
+                    updateUserProfile();
                     closeModal('profile-modal');
                 }
             });
