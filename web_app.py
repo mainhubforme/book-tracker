@@ -1445,7 +1445,7 @@ PAGE_TEMPLATE = """
     </div>
     
     <button class="fab" onclick="openModal('add-modal')">+</button>
-    
+
     <script>
         // CRITICAL: Declare at very top of script
         let selectedFiles = [];
@@ -1738,27 +1738,66 @@ PAGE_TEMPLATE = """
                     
                     if (processingStatus) {
                         processingStatus.style.display = 'block';
+                        const statusText = processingStatus.querySelector('p');
+                        if (statusText) {
+                            statusText.textContent = `Processing ${selectedFiles.length} book(s)...`;
+                        }
                     }
                     form.style.display = 'none';
                     
                     try {
-                        for (const file of selectedFiles) {
+                        let successCount = 0;
+                        let errorCount = 0;
+                        
+                        for (let i = 0; i < selectedFiles.length; i++) {
+                            const file = selectedFiles[i];
                             const formData = new FormData();
                             formData.append('image', file);
                             formData.append('user_name', userName);
                             
-                            const response = await fetch('/api/add-book', {
-                                method: 'POST',
-                                body: formData
-                            });
+                            console.log(`Processing book ${i + 1}/${selectedFiles.length}...`);
                             
-                            const result = await response.json();
-                            if (!result.success) {
-                                console.error('Failed to add book:', result.error);
+                            try {
+                                const response = await fetch('/api/add-book', {
+                                    method: 'POST',
+                                    body: formData
+                                });
+                                
+                                const result = await response.json();
+                                
+                                if (result.success) {
+                                    console.log(`Book ${i + 1} added successfully:`, result.book_id);
+                                    successCount++;
+                                } else {
+                                    console.error(`Failed to add book ${i + 1}:`, result.error);
+                                    errorCount++;
+                                }
+                            } catch (err) {
+                                console.error(`Error processing book ${i + 1}:`, err);
+                                errorCount++;
+                            }
+                            
+                            // Update progress
+                            if (processingStatus) {
+                                const statusText = processingStatus.querySelector('p');
+                                if (statusText) {
+                                    statusText.textContent = `Processed ${i + 1}/${selectedFiles.length} books...`;
+                                }
                             }
                         }
                         
-                        location.reload();
+                        console.log(`Completed: ${successCount} success, ${errorCount} errors`);
+                        
+                        if (successCount > 0) {
+                            // Reload to show new books
+                            location.reload();
+                        } else {
+                            alert(`Failed to add any books. Please check the console for errors.`);
+                            if (processingStatus) {
+                                processingStatus.style.display = 'none';
+                            }
+                            form.style.display = 'block';
+                        }
                     } catch (error) {
                         console.error('Error:', error);
                         alert('Error adding books. Please try again.');
