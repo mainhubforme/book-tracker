@@ -1447,8 +1447,11 @@ PAGE_TEMPLATE = """
     <button class="fab" onclick="openModal('add-modal')">+</button>
     
     <script>
-            // CRITICAL: Declare at very top of script
-            let selectedFiles = [];
+        // CRITICAL: Declare at very top of script
+        let selectedFiles = [];
+        
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
             
             // Toggle genres
             function toggleGenres(bookId) {
@@ -1691,16 +1694,19 @@ PAGE_TEMPLATE = """
         }
         
         updateUserName();
-        
-        document.getElementById('profile-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('profile-name').value.trim();
-            if (name) {
-                localStorage.setItem('bookTrackerUserName', name);
-                updateUserName();
-                closeModal('profile-modal');
-            }
-        });
+                
+                document.getElementById('profile-form').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const name = document.getElementById('profile-name').value.trim();
+                    if (name) {
+                        localStorage.setItem('bookTrackerUserName', name);
+                        updateUserName();
+                        closeModal('profile-modal');
+                    }
+                });
+                
+            }); // Close DOMContentLoaded
+</script>
     </script>
 </body>
 </html>
