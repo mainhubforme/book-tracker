@@ -7,8 +7,8 @@ Enhanced with read tracking and better data sources
 import os
 import sys
 
-# ============= COMPREHENSIVE PROXY FIX FOR RENDER =============
-# This MUST come before any other imports
+# ============= ULTRA-AGGRESSIVE PROXY FIX FOR RENDER =============
+# This MUST come before ANY imports
 
 # Step 1: Clear ALL proxy environment variables
 proxy_vars = [
@@ -19,31 +19,53 @@ proxy_vars = [
 for var in proxy_vars:
     os.environ.pop(var, None)
 
-# Step 2: Import openai
-import openai
-
-# Step 3: Patch at the httpx level to prevent proxy usage
+# Step 2: Import and patch httpx BEFORE openai
 import httpx
 
-# Store original httpx.Client
+# Store original classes
 _OriginalHttpxClient = httpx.Client
+_OriginalAsyncClient = httpx.AsyncClient
 
 class PatchedHttpxClient(_OriginalHttpxClient):
-    """Httpx client that ignores proxy arguments."""
+    """Httpx client that completely ignores proxy arguments."""
     def __init__(self, *args, **kwargs):
-        # Remove ALL proxy-related arguments
+        # Nuclear option: remove ALL potentially problematic kwargs
         kwargs.pop('proxies', None)
         kwargs.pop('proxy', None)
         kwargs.pop('mounts', None)
         kwargs.pop('trust_env', None)
         
-        # Explicitly disable trust_env to prevent reading env vars
+        # Force trust_env to False
         kwargs['trust_env'] = False
         
         super().__init__(*args, **kwargs)
 
-# Replace httpx.Client globally
+class PatchedAsyncClient(_OriginalAsyncClient):
+    """Async httpx client that completely ignores proxy arguments."""
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('proxies', None)
+        kwargs.pop('proxy', None)
+        kwargs.pop('mounts', None)
+        kwargs.pop('trust_env', None)
+        kwargs['trust_env'] = False
+        super().__init__(*args, **kwargs)
+
+# Replace globally BEFORE any other imports
 httpx.Client = PatchedHttpxClient
+httpx.AsyncClient = PatchedAsyncClient
+
+# Step 3: Now import openai (which will use our patched httpx)
+import openai
+from openai import OpenAI
+
+# Step 4: Additional safety - create a custom http_client factory
+def create_safe_http_client():
+    """Create an httpx client with no proxy support."""
+    return PatchedHttpxClient(
+        timeout=httpx.Timeout(60.0),
+        limits=httpx.Limits(max_keepalive_connections=10, max_connections=100),
+        trust_env=False
+    )
 
 # ============= END PROXY FIX =============
 
@@ -65,7 +87,6 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from tabulate import tabulate
 import pandas as pd
-from openai import OpenAI
 
 # ============================================================================
 # CONFIGURATION
