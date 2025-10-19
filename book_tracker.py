@@ -18,50 +18,35 @@ from urllib.parse import quote
 
 import requests
 from bs4 import BeautifulSoup
-from openai import OpenAI
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Boolean, or_
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from tabulate import tabulate
 import pandas as pd
-# ============= IMPROVED PROXY FIX =============
-# Remove ALL proxy-related environment variables FIRST
+
+# ============= PROXY FIX - MUST BE BEFORE OPENAI IMPORT =============
+# Remove ALL proxy-related environment variables
 proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
               'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
 for var in proxy_vars:
     os.environ.pop(var, None)
 
-# More robust OpenAI client patching
-try:
-    from openai import OpenAI as _OriginalOpenAI
-    
-    class OpenAI(_OriginalOpenAI):
-        """Patched OpenAI client that strips proxy-related arguments."""
-        def __init__(self, **kwargs):
-            # Remove any proxy-related kwargs that might cause issues
-            kwargs.pop('proxies', None)
-            kwargs.pop('proxy', None)
-            kwargs.pop('http_client', None)
-            # Call parent with cleaned kwargs
-            super().__init__(**kwargs)
-    
-    # Also try to patch the Client class if it exists separately
-    try:
-        from openai import Client as _OriginalClient
-        class Client(_OriginalClient):
-            def __init__(self, **kwargs):
-                kwargs.pop('proxies', None)
-                kwargs.pop('proxy', None)
-                kwargs.pop('http_client', None)
-                super().__init__(**kwargs)
-    except (ImportError, AttributeError):
-        pass
-        
-except Exception as e:
-    print(f"Warning: Could not patch OpenAI client: {e}")
-    from openai import OpenAI
-# ============= END OF IMPROVED FIX =============
-# ============= END OF ADDITION =============
+# Import OpenAI AFTER clearing proxies
+from openai import OpenAI
+
+# Patch OpenAI to ignore proxy arguments
+_original_openai_init = OpenAI.__init__
+
+def _patched_openai_init(self, **kwargs):
+    # Remove any proxy-related kwargs
+    kwargs.pop('proxies', None)
+    kwargs.pop('proxy', None)
+    kwargs.pop('http_client', None)
+    return _original_openai_init(self, **kwargs)
+
+OpenAI.__init__ = _patched_openai_init
+# ============= END OF PROXY FIX =============
+
 # CONFIGURATION
 # ============================================================================
 
@@ -356,22 +341,21 @@ class DatabaseManager:
 
 class ImageProcessor:
     """Handles image processing and book information extraction."""
-  def __init__(self):
-      """Initialize the OpenAI client."""
-      if not OPENAI_API_KEY:
-          raise ValueError("OPENAI_API_KEY not found. Please set it in your .env file")
-      
-      try:
-          # Initialize with minimal kwargs to avoid proxy issues
-          self.client = OpenAI(
-              api_key=OPENAI_API_KEY,
-              timeout=60.0,  # Add explicit timeout
-              max_retries=2   # Add explicit retries
-          )
-      except Exception as e:
-          print(f"Error initializing OpenAI client: {e}")
-          # Fallback: try with just the API key
-          self.client = OpenAI(api_key=OPENAI_API_KEY)     
+    
+    def __init__(self):
+        """Initialize the OpenAI client."""
+        if not OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY not found. Please set it in your .env file")
+        
+        try:
+            self.client = OpenAI(
+                api_key=OPENAI_API_KEY,
+                timeout=60.0,
+                max_retries=2
+            )
+        except Exception as e:
+            print(f"Warning initializing OpenAI client: {e}")
+            self.client = OpenAI(api_key=OPENAI_API_KEY)     
     
     def validate_image(self, image_path: str) -> bool:
         """Validate image file format and size."""
