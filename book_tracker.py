@@ -7,13 +7,13 @@ Enhanced with read tracking and better data sources
 import os
 import sys
 
-# ============= CRITICAL: Clear proxies BEFORE any other imports =============
-proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
-              'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
-for var in proxy_vars:
-    os.environ.pop(var, None)
+# ============= CRITICAL: AGGRESSIVE PROXY FIX =============
+# Clear ALL proxy environment variables
+for key in list(os.environ.keys()):
+    if 'PROXY' in key.upper():
+        del os.environ[key]
 
-# Now import everything else
+# Import everything we need
 import json
 import base64
 import argparse
@@ -31,19 +31,31 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from tabulate import tabulate
 import pandas as pd
-from openai import OpenAI
 
-# Patch OpenAI to ignore proxy arguments
-_original_openai_init = OpenAI.__init__
+# Import OpenAI last and patch it aggressively
+from openai import OpenAI as _OriginalOpenAI
 
-def _patched_openai_init(self, **kwargs):
-    kwargs.pop('proxies', None)
-    kwargs.pop('proxy', None)
-    kwargs.pop('http_client', None)
-    return _original_openai_init(self, **kwargs)
-
-OpenAI.__init__ = _patched_openai_init
-# ============= END OF PROXY FIX =============
+class OpenAI(_OriginalOpenAI):
+    """Patched OpenAI client that strips ALL proxy-related arguments."""
+    def __init__(self, api_key=None, **kwargs):
+        # Remove ALL possible proxy-related kwargs
+        kwargs.pop('proxies', None)
+        kwargs.pop('proxy', None)
+        kwargs.pop('http_client', None)
+        kwargs.pop('httpx_client', None)
+        
+        # Only pass safe kwargs
+        safe_kwargs = {
+            'api_key': api_key or kwargs.get('api_key'),
+            'timeout': kwargs.get('timeout', 60.0),
+            'max_retries': kwargs.get('max_retries', 2)
+        }
+        
+        # Filter out None values
+        safe_kwargs = {k: v for k, v in safe_kwargs.items() if v is not None}
+        
+        super().__init__(**safe_kwargs)
+# ============= END OF AGGRESSIVE PROXY FIX =============
 
 # CONFIGURATION
 load_dotenv()
@@ -323,15 +335,8 @@ class ImageProcessor:
         if not OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY not found. Please set it in your .env file")
         
-        try:
-            self.client = OpenAI(
-                api_key=OPENAI_API_KEY,
-                timeout=60.0,
-                max_retries=2
-            )
-        except Exception as e:
-            print(f"Warning initializing OpenAI client: {e}")
-            self.client = OpenAI(api_key=OPENAI_API_KEY)
+        # Use our patched OpenAI class with only api_key
+        self.client = OpenAI(api_key=OPENAI_API_KEY)
     
     def validate_image(self, image_path: str) -> bool:
         """Validate image file format and size."""
@@ -503,7 +508,6 @@ class GoodreadsScraper:
             
             result = {"goodreads_url": book_url}
             
-            # Extract rating
             rating_elem = book_soup.find("div", class_="RatingStatistics__rating")
             if rating_elem:
                 try:
@@ -511,7 +515,6 @@ class GoodreadsScraper:
                 except ValueError:
                     pass
             
-            # Extract summary
             summary = None
             desc_section = (
                 book_soup.find("div", class_="DetailsLayoutRightParagraph")
@@ -532,7 +535,6 @@ class GoodreadsScraper:
             if summary:
                 result["summary"] = summary.strip()
             
-            # Extract genres
             genres = []
             
             genre_labels = book_soup.find_all("span", {"data-testid": "genreActionLabel"})
@@ -578,7 +580,6 @@ class GoodreadsScraper:
             else:
                 print(f"  [!] No genres found on page")
             
-            # Publication date
             details = book_soup.find("p", {"data-testid": "publicationInfo"})
             if details:
                 match = re.search(r"(\w+ \d+, \d{4}|\w+ \d{4}|\d{4})", details.get_text())
@@ -598,15 +599,8 @@ class BookEnricher:
     def __init__(self):
         self.goodreads = GoodreadsScraper()
         if OPENAI_API_KEY:
-            try:
-                self.client = OpenAI(
-                    api_key=OPENAI_API_KEY,
-                    timeout=60.0,
-                    max_retries=2
-                )
-            except Exception as e:
-                print(f"Error initializing OpenAI client: {e}")
-                self.client = OpenAI(api_key=OPENAI_API_KEY)
+            # Use our patched OpenAI class
+            self.client = OpenAI(api_key=OPENAI_API_KEY)
         else:
             self.client = None
     
