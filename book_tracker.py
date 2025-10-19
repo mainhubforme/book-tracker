@@ -7,13 +7,67 @@ Enhanced with read tracking and better data sources
 import os
 import sys
 
-# ============= CRITICAL RENDER FIX - Add at very top =============
-# Clear ALL proxy environment variables before importing OpenAI
+# ============= AGGRESSIVE PROXY FIX =============
+# Step 1: Clear ALL proxy environment variables
 for key in list(os.environ.keys()):
     if 'PROXY' in key.upper():
         del os.environ[key]
-# ============= END RENDER FIX =============
 
+# Step 2: Import and patch at the lowest level possible
+import openai
+from openai import OpenAI as _OriginalOpenAI
+
+# Step 3: Create wrapper that strips ALL kwargs
+class OpenAI(_OriginalOpenAI):
+    """Patched OpenAI that strips proxy arguments."""
+    def __init__(self, *args, **kwargs):
+        # Remove ALL potentially problematic kwargs
+        kwargs.pop('proxies', None)
+        kwargs.pop('proxy', None)
+        kwargs.pop('http_client', None)
+        kwargs.pop('httpx_client', None)
+        
+        # Only keep safe kwargs
+        safe_kwargs = {}
+        if 'api_key' in kwargs:
+            safe_kwargs['api_key'] = kwargs['api_key']
+        if args and len(args) > 0:
+            safe_kwargs['api_key'] = args[0]
+        if 'timeout' in kwargs:
+            safe_kwargs['timeout'] = kwargs['timeout']
+        if 'max_retries' in kwargs:
+            safe_kwargs['max_retries'] = kwargs['max_retries']
+            
+        super().__init__(**safe_kwargs)
+
+# Step 4: Replace in the module itself
+openai.OpenAI = OpenAI
+
+# Step 5: Also patch the Client class if it exists
+if hasattr(openai, 'Client'):
+    class Client(openai.Client):
+        def __init__(self, *args, **kwargs):
+            kwargs.pop('proxies', None)
+            kwargs.pop('proxy', None)
+            kwargs.pop('http_client', None)
+            kwargs.pop('httpx_client', None)
+            
+            safe_kwargs = {}
+            if 'api_key' in kwargs:
+                safe_kwargs['api_key'] = kwargs['api_key']
+            if args and len(args) > 0:
+                safe_kwargs['api_key'] = args[0]
+            if 'timeout' in kwargs:
+                safe_kwargs['timeout'] = kwargs['timeout']
+            if 'max_retries' in kwargs:
+                safe_kwargs['max_retries'] = kwargs['max_retries']
+                
+            super().__init__(**safe_kwargs)
+    
+    openai.Client = Client
+# ============= END AGGRESSIVE FIX =============
+
+# Now import everything else
 import json
 import base64
 import argparse
@@ -31,6 +85,8 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from tabulate import tabulate
 import pandas as pd
+
+# The rest of your file continues here unchanged...
 
 # ============= PATCH OPENAI TO WORK ON RENDER =============
 from openai import OpenAI as _OriginalOpenAI
