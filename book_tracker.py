@@ -387,7 +387,12 @@ class ImageProcessor:
         """Initialize the OpenAI client."""
         if not OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY not found. Please set it in your .env file")
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
+        
+        # Create OpenAI client with custom http_client to avoid proxy issues
+        self.client = OpenAI(
+            api_key=OPENAI_API_KEY,
+            http_client=create_safe_http_client()
+        )
     
     def validate_image(self, image_path: str) -> bool:
         """Validate image file format and size."""
@@ -458,7 +463,7 @@ RETURN ONLY THE RAW JSON. No markdown, no code blocks, no explanations."""
                         ]
                     }
                 ],
-                max_completion_tokens=500
+                max_tokens=500
             )
             
             response_text = response.choices[0].message.content.strip()
@@ -668,7 +673,10 @@ class BookEnricher:
     def identify_major_awards(self, title: str, author: str, date_published: str) -> Optional[str]:
         """Use LLM to identify if the book won any major literary awards."""
         try:
-            client = OpenAI(api_key=OPENAI_API_KEY)
+            client = OpenAI(
+                api_key=OPENAI_API_KEY,
+                http_client=create_safe_http_client()
+            )
             
             prompt = f"""Does this book have any major literary awards? List ONLY the actual awards won (not nominations).
 
