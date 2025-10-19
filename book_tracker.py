@@ -7,65 +7,45 @@ Enhanced with read tracking and better data sources
 import os
 import sys
 
-# ============= AGGRESSIVE PROXY FIX =============
+# ============= COMPREHENSIVE PROXY FIX FOR RENDER =============
+# This MUST come before any other imports
+
 # Step 1: Clear ALL proxy environment variables
-for key in list(os.environ.keys()):
-    if 'PROXY' in key.upper():
-        del os.environ[key]
+proxy_vars = [
+    'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy',
+    'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy',
+    'REQUESTS_PROXY', 'requests_proxy'
+]
+for var in proxy_vars:
+    os.environ.pop(var, None)
 
-# Step 2: Import and patch at the lowest level possible
+# Step 2: Import openai
 import openai
-from openai import OpenAI as _OriginalOpenAI
 
-# Step 3: Create wrapper that strips ALL kwargs
-class OpenAI(_OriginalOpenAI):
-    """Patched OpenAI that strips proxy arguments."""
+# Step 3: Patch at the httpx level to prevent proxy usage
+import httpx
+
+# Store original httpx.Client
+_OriginalHttpxClient = httpx.Client
+
+class PatchedHttpxClient(_OriginalHttpxClient):
+    """Httpx client that ignores proxy arguments."""
     def __init__(self, *args, **kwargs):
-        # Remove ALL potentially problematic kwargs
+        # Remove ALL proxy-related arguments
         kwargs.pop('proxies', None)
         kwargs.pop('proxy', None)
-        kwargs.pop('http_client', None)
-        kwargs.pop('httpx_client', None)
+        kwargs.pop('mounts', None)
+        kwargs.pop('trust_env', None)
         
-        # Only keep safe kwargs
-        safe_kwargs = {}
-        if 'api_key' in kwargs:
-            safe_kwargs['api_key'] = kwargs['api_key']
-        if args and len(args) > 0:
-            safe_kwargs['api_key'] = args[0]
-        if 'timeout' in kwargs:
-            safe_kwargs['timeout'] = kwargs['timeout']
-        if 'max_retries' in kwargs:
-            safe_kwargs['max_retries'] = kwargs['max_retries']
-            
-        super().__init__(**safe_kwargs)
+        # Explicitly disable trust_env to prevent reading env vars
+        kwargs['trust_env'] = False
+        
+        super().__init__(*args, **kwargs)
 
-# Step 4: Replace in the module itself
-openai.OpenAI = OpenAI
+# Replace httpx.Client globally
+httpx.Client = PatchedHttpxClient
 
-# Step 5: Also patch the Client class if it exists
-if hasattr(openai, 'Client'):
-    class Client(openai.Client):
-        def __init__(self, *args, **kwargs):
-            kwargs.pop('proxies', None)
-            kwargs.pop('proxy', None)
-            kwargs.pop('http_client', None)
-            kwargs.pop('httpx_client', None)
-            
-            safe_kwargs = {}
-            if 'api_key' in kwargs:
-                safe_kwargs['api_key'] = kwargs['api_key']
-            if args and len(args) > 0:
-                safe_kwargs['api_key'] = args[0]
-            if 'timeout' in kwargs:
-                safe_kwargs['timeout'] = kwargs['timeout']
-            if 'max_retries' in kwargs:
-                safe_kwargs['max_retries'] = kwargs['max_retries']
-                
-            super().__init__(**safe_kwargs)
-    
-    openai.Client = Client
-# ============= END AGGRESSIVE FIX =============
+# ============= END PROXY FIX =============
 
 # Now import everything else
 import json
@@ -85,30 +65,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from tabulate import tabulate
 import pandas as pd
-
-# The rest of your file continues here unchanged...
-
-# ============= PATCH OPENAI TO WORK ON RENDER =============
-from openai import OpenAI as _OriginalOpenAI
-
-class OpenAI(_OriginalOpenAI):
-    """Patched OpenAI that ignores proxy arguments."""
-    def __init__(self, api_key=None, **kwargs):
-        # Strip proxy-related arguments
-        kwargs.pop('proxies', None)
-        kwargs.pop('proxy', None)
-        kwargs.pop('http_client', None)
-        kwargs.pop('httpx_client', None)
-        
-        # Only pass safe arguments
-        safe_kwargs = {'api_key': api_key or kwargs.get('api_key')}
-        if 'timeout' in kwargs:
-            safe_kwargs['timeout'] = kwargs['timeout']
-        if 'max_retries' in kwargs:
-            safe_kwargs['max_retries'] = kwargs['max_retries']
-        
-        super().__init__(**safe_kwargs)
-# ============= END OPENAI PATCH =============
+from openai import OpenAI
 
 # ============================================================================
 # CONFIGURATION
@@ -268,7 +225,6 @@ class DatabaseManager:
         try:
             book = session.query(Book).filter(Book.id == book_id).first()
             if book:
-                # Optionally delete the image file
                 if book.image_path and Path(book.image_path).exists():
                     try:
                         Path(book.image_path).unlink()
@@ -410,7 +366,6 @@ class ImageProcessor:
         """Initialize the OpenAI client."""
         if not OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY not found. Please set it in your .env file")
-        # Use our patched OpenAI class
         self.client = OpenAI(api_key=OPENAI_API_KEY)
     
     def validate_image(self, image_path: str) -> bool:
@@ -512,6 +467,8 @@ RETURN ONLY THE RAW JSON. No markdown, no code blocks, no explanations."""
             return None
         except Exception as e:
             print(f"Error processing image: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
 # ============================================================================
@@ -536,10 +493,7 @@ class GoodreadsScraper:
         self.last_request_time = time.time()
 
     def search_goodreads(self, title: str, author: str = None) -> Optional[Dict]:
-        """
-        Search Goodreads for book metadata including rating, summary, and sub-genres.
-        IMPROVED: Filters out study guides, summaries, and analyses to find the actual book.
-        """
+        """Search Goodreads for book metadata."""
         try:
             self._rate_limit()
 
@@ -550,25 +504,16 @@ class GoodreadsScraper:
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
 
-            # Find ALL book title links, not just the first
             book_links = soup.find_all("a", class_="bookTitle", limit=10)
             
             if not book_links:
                 print("  [!] No books found in search results")
                 return None
 
-            # IMPROVED: Filter out study guides, summaries, analyses
             skip_keywords = [
-                'study guide',
-                'book analysis',
-                'summary',
-                'sparknotes',
-                'cliffsnotes',
-                'reader\'s guide',
-                'companion',
-                'critical analysis',
-                'detailed summary',
-                'litcharts'
+                'study guide', 'book analysis', 'summary', 'sparknotes',
+                'cliffsnotes', 'reader\'s guide', 'companion', 'critical analysis',
+                'detailed summary', 'litcharts'
             ]
             
             selected_link = None
@@ -577,12 +522,10 @@ class GoodreadsScraper:
                 link_title = link.get('title', '').lower() if link.get('title') else ''
                 combined_text = f"{link_text} {link_title}"
                 
-                # Skip if it looks like a study guide
                 if any(keyword in combined_text for keyword in skip_keywords):
                     print(f"  [~] Skipping: {link.get_text(strip=True)[:60]}...")
                     continue
                 
-                # This looks like the actual book
                 selected_link = link
                 print(f"  [+] Selected: {link.get_text(strip=True)[:60]}")
                 break
@@ -600,7 +543,7 @@ class GoodreadsScraper:
 
             result = {"goodreads_url": book_url}
 
-            # --- Extract rating ---
+            # Extract rating
             rating_elem = book_soup.find("div", class_="RatingStatistics__rating")
             if rating_elem:
                 try:
@@ -608,7 +551,7 @@ class GoodreadsScraper:
                 except ValueError:
                     pass
 
-            # --- Extract summary ---
+            # Extract summary
             summary = None
             desc_section = (
                 book_soup.find("div", class_="DetailsLayoutRightParagraph")
@@ -619,7 +562,6 @@ class GoodreadsScraper:
             if desc_section:
                 text_block = desc_section.get_text(separator=" ", strip=True)
                 if text_block and len(text_block) > 40:
-                    # Get first sentence
                     summary = re.split(r"(?<=[.!?])\s+", text_block)[0]
             
             if not summary:
@@ -630,17 +572,15 @@ class GoodreadsScraper:
             if summary:
                 result["summary"] = summary.strip()
 
-            # --- Extract sub-genres with MULTIPLE STRATEGIES ---
+            # Extract genres
             genres = []
             
-            # Strategy 1: data-testid approach (most current)
             genre_labels = book_soup.find_all("span", {"data-testid": "genreActionLabel"})
             for label in genre_labels[:10]:
                 genre_text = label.get_text(strip=True)
                 if genre_text and 2 < len(genre_text) < 50:
                     genres.append(genre_text)
             
-            # Strategy 2: BookPageMetadataSection with Button labels
             if not genres:
                 genre_section = book_soup.find("div", class_="BookPageMetadataSection__genres")
                 if genre_section:
@@ -650,22 +590,18 @@ class GoodreadsScraper:
                         if genre_text and genre_text not in genres and 2 < len(genre_text) < 50:
                             genres.append(genre_text)
             
-            # Strategy 3: Links containing '/genres/'
             if not genres:
                 genre_links = book_soup.find_all("a", href=lambda x: x and "/genres/" in x, limit=15)
                 for link in genre_links[:10]:
                     genre_text = link.get_text(strip=True)
-                    # Clean up
                     genre_text = re.sub(r'\s*\d+\s*users?.*$', '', genre_text, flags=re.IGNORECASE)
-                    genre_text = re.sub(r'\s*›.*$', '', genre_text)
+                    genre_text = re.sub(r'\s*â€º.*$', '', genre_text)
                     
-                    # Filter noise
                     if genre_text and genre_text not in genres and 2 < len(genre_text) < 50:
                         skip_words = ['shelf', 'to-read', 'want', 'currently', 'more genres', 'add', 'vote']
                         if not any(skip in genre_text.lower() for skip in skip_words):
                             genres.append(genre_text)
             
-            # Strategy 4: Old elementList (fallback)
             if not genres:
                 element_list = book_soup.find("div", class_="elementList")
                 if element_list:
@@ -682,7 +618,7 @@ class GoodreadsScraper:
             else:
                 print(f"  [!] No genres found on page")
 
-            # --- Publication date ---
+            # Publication date
             details = book_soup.find("p", {"data-testid": "publicationInfo"})
             if details:
                 match = re.search(r"(\w+ \d+, \d{4}|\w+ \d{4}|\d{4})", details.get_text())
@@ -711,7 +647,6 @@ class BookEnricher:
     def identify_major_awards(self, title: str, author: str, date_published: str) -> Optional[str]:
         """Use LLM to identify if the book won any major literary awards."""
         try:
-            # Use our patched OpenAI class
             client = OpenAI(api_key=OPENAI_API_KEY)
             
             prompt = f"""Does this book have any major literary awards? List ONLY the actual awards won (not nominations).
@@ -792,7 +727,6 @@ Be factually accurate. Only list awards you are certain about."""
                 enriched_data['genre'] = all_categories[0]
                 enriched_data['genres'] = ', '.join(all_categories)
             
-            # Try multiple fields for description
             description = None
             if 'description' in book_data and book_data['description']:
                 description = book_data['description']
@@ -816,12 +750,10 @@ Be factually accurate. Only list awards you are certain about."""
         title = book_info.get('title', '')
         author = book_info.get('author', '')
         
-        # Fetch from Goodreads FIRST (has best data)
         if use_goodreads:
             print("  -> Fetching from Goodreads...")
             goodreads_data = self.goodreads.search_goodreads(title, author)
             if goodreads_data:
-                # Goodreads data takes priority
                 for key, value in goodreads_data.items():
                     if value and value not in ['Unknown', 'None', '']:
                         book_info[key] = value
@@ -829,7 +761,6 @@ Be factually accurate. Only list awards you are certain about."""
                 if goodreads_data.get('goodreads_score'):
                     print(f"  [+] Goodreads rating: {goodreads_data['goodreads_score']}/5")
         
-        # Only fetch from Google Books if we're missing critical data
         missing_data = (
             not book_info.get('summary') or 
             not book_info.get('genres') or 
@@ -842,11 +773,9 @@ Be factually accurate. Only list awards you are certain about."""
             
             if enriched:
                 for key, value in enriched.items():
-                    # Only use Google Books data if we don't have it from Goodreads
                     if key not in book_info or book_info[key] in [None, 'Unknown', '']:
                         book_info[key] = value
         
-        # Identify major awards using LLM
         if author and author != 'Unknown':
             print("  -> Identifying major awards...")
             date_pub = book_info.get('date_published', 'Unknown')
@@ -854,7 +783,6 @@ Be factually accurate. Only list awards you are certain about."""
             if awards:
                 book_info['major_awards'] = awards
         
-        # Set defaults for missing fields
         defaults = {
             'date_published': 'Unknown',
             'part_of_series': 'No',
@@ -875,7 +803,7 @@ Be factually accurate. Only list awards you are certain about."""
         return book_info
 
 # ============================================================================
-# CLI FUNCTIONS - Keep all your existing functions
+# CLI FUNCTIONS
 # ============================================================================
 
 def add_book(image_path: str, db: DatabaseManager, use_goodreads: bool = True, added_by: str = None):
@@ -1096,47 +1024,38 @@ def main():
     
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
-    # Add book command
     add_parser = subparsers.add_parser('add', help='Add a book from an image')
     add_parser.add_argument('image', help='Path to book cover image')
     add_parser.add_argument('--no-goodreads', action='store_true', help='Skip Goodreads lookup')
     add_parser.add_argument('--added-by', help='Name of person adding the book')
     
-    # Batch add command
     batch_parser = subparsers.add_parser('batch', help='Add multiple books from a folder')
     batch_parser.add_argument('folder', help='Path to folder containing book cover images')
     batch_parser.add_argument('--no-goodreads', action='store_true', help='Skip Goodreads lookup')
     batch_parser.add_argument('--added-by', help='Name of person adding the books')
     
-    # List books command
     list_parser = subparsers.add_parser('list', help='List all books')
     list_parser.add_argument('--added-by', help='Filter by user who added')
     list_parser.add_argument('--read-by', help='Filter by user who read')
     list_parser.add_argument('--unread', action='store_true', help='Show only unread books')
     list_parser.add_argument('--genre', help='Filter by genre')
     
-    # Mark read command
     read_parser = subparsers.add_parser('read', help='Mark a book as read')
     read_parser.add_argument('book_id', type=int, help='Book ID')
     read_parser.add_argument('--read-by', help='Name of person who read it')
     
-    # Mark unread command
     unread_parser = subparsers.add_parser('unread', help='Mark a book as unread')
     unread_parser.add_argument('book_id', type=int, help='Book ID')
     
-    # Delete command
     delete_parser = subparsers.add_parser('delete', help='Delete a book')
     delete_parser.add_argument('book_id', type=int, help='Book ID')
     
-    # Search command
     search_parser = subparsers.add_parser('search', help='Search for books')
     search_parser.add_argument('query', help='Search query')
     
-    # Export command
     export_parser = subparsers.add_parser('export', help='Export books to CSV')
     export_parser.add_argument('filepath', help='Output CSV file path')
     
-    # Stats command
     subparsers.add_parser('stats', help='Show library statistics')
     
     args = parser.parse_args()
@@ -1145,10 +1064,8 @@ def main():
         parser.print_help()
         return
     
-    # Initialize database
     db = DatabaseManager()
     
-    # Execute commands
     if args.command == 'add':
         add_book(args.image, db, not args.no_goodreads, args.added_by)
     
