@@ -614,17 +614,24 @@ class GoodreadsScraper:
 # ============================================================================
 # BOOK ENRICHER
 # ============================================================================
-
 class BookEnricher:
     """Enriches book data with additional information from external APIs."""
     
     def __init__(self):
         self.goodreads = GoodreadsScraper()
+        # Initialize OpenAI client once in __init__
+        if OPENAI_API_KEY:
+            self.client = OpenAI(api_key=OPENAI_API_KEY)
+        else:
+            self.client = None
     
     def identify_major_awards(self, title: str, author: str, date_published: str) -> Optional[str]:
         """Use LLM to identify if the book won any major literary awards."""
         try:
-            client = OpenAI(api_key=OPENAI_API_KEY)
+            # Use the instance client instead of creating a new one
+            if not self.client:
+                print("  Note: OpenAI API key not available for award identification")
+                return "TBD"
             
             prompt = f"""Does this book have any major literary awards? List ONLY the actual awards won (not nominations).
 
@@ -651,7 +658,7 @@ If the book won awards, respond with a comma-separated list like: "Pulitzer Priz
 If the book won NO major awards, respond with exactly: "None"
 Be factually accurate. Only list awards you are certain about."""
 
-            response = client.chat.completions.create(
+            response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=150,
@@ -667,124 +674,6 @@ Be factually accurate. Only list awards you are certain about."""
         except Exception as e:
             print(f"  Note: Could not identify awards: {e}")
             return "TBD"
-    
-    def search_google_books(self, title: str, author: str = None) -> Optional[Dict]:
-        """Search Google Books API for book information."""
-        query_parts = [title]
-        if author and author.lower() != 'unknown':
-            query_parts.append(author)
-        
-        query = ' '.join(query_parts)
-        params = {'q': query, 'maxResults': 1}
-        
-        try:
-            response = requests.get(GOOGLE_BOOKS_API_URL, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            
-            if 'items' not in data or len(data['items']) == 0:
-                return None
-            
-            book_data = data['items'][0]['volumeInfo']
-            
-            enriched_data = {
-                'date_published': book_data.get('publishedDate', 'Unknown'),
-                'publisher': book_data.get('publisher', 'Unknown'),
-                'page_count': book_data.get('pageCount'),
-            }
-            
-            if 'industryIdentifiers' in book_data:
-                for identifier in book_data['industryIdentifiers']:
-                    if identifier['type'] in ['ISBN_13', 'ISBN_10']:
-                        enriched_data['isbn'] = identifier['identifier']
-                        break
-            
-            if 'categories' in book_data and book_data['categories']:
-                all_categories = book_data['categories']
-                enriched_data['genre'] = all_categories[0]
-                enriched_data['genres'] = ', '.join(all_categories)
-            
-            # Try multiple fields for description
-            description = None
-            if 'description' in book_data and book_data['description']:
-                description = book_data['description']
-            elif 'textSnippet' in book_data and book_data['textSnippet']:
-                description = book_data['textSnippet']
-            
-            if description:
-                enriched_data['summary'] = description
-                print(f"  [+] Found summary ({len(description)} chars)")
-            else:
-                print(f"  [!] No summary available from Google Books")
-            
-            return enriched_data
-            
-        except Exception as e:
-            print(f"  Note: Could not fetch Google Books data: {e}")
-            return None
-    
-    def enrich_book_data(self, book_info: Dict, use_goodreads: bool = True) -> Dict:
-        """Enrich book data with additional information."""
-        title = book_info.get('title', '')
-        author = book_info.get('author', '')
-        
-        # Fetch from Goodreads FIRST (has best data)
-        if use_goodreads:
-            print("  -> Fetching from Goodreads...")
-            goodreads_data = self.goodreads.search_goodreads(title, author)
-            if goodreads_data:
-                # Goodreads data takes priority
-                for key, value in goodreads_data.items():
-                    if value and value not in ['Unknown', 'None', '']:
-                        book_info[key] = value
-                
-                if goodreads_data.get('goodreads_score'):
-                    print(f"  [+] Goodreads rating: {goodreads_data['goodreads_score']}/5")
-        
-        # Only fetch from Google Books if we're missing critical data
-        missing_data = (
-            not book_info.get('summary') or 
-            not book_info.get('genres') or 
-            not book_info.get('date_published')
-        )
-        
-        if missing_data:
-            print("  -> Filling gaps with Google Books...")
-            enriched = self.search_google_books(title, author)
-            
-            if enriched:
-                for key, value in enriched.items():
-                    # Only use Google Books data if we don't have it from Goodreads
-                    if key not in book_info or book_info[key] in [None, 'Unknown', '']:
-                        book_info[key] = value
-        
-        # Identify major awards using LLM
-        if author and author != 'Unknown':
-            print("  -> Identifying major awards...")
-            date_pub = book_info.get('date_published', 'Unknown')
-            awards = self.identify_major_awards(title, author, date_pub)
-            if awards:
-                book_info['major_awards'] = awards
-        
-        # Set defaults for missing fields
-        defaults = {
-            'date_published': 'Unknown',
-            'part_of_series': 'No',
-            'series_number': None,
-            'major_awards': 'None',
-            'publisher': 'Unknown',
-            'goodreads_score': None,
-            'is_read': False,
-            'genre': 'Unknown',
-            'genres': 'Unknown',
-            'summary': 'No summary available'
-        }
-        
-        for key, default_value in defaults.items():
-            if key not in book_info or book_info[key] in [None, '']:
-                book_info[key] = default_value
-        
-        return book_info
 
 # ============================================================================
 # CLI FUNCTIONS
