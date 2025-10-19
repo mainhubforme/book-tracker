@@ -328,7 +328,20 @@ class ImageProcessor:
         """Initialize the OpenAI client."""
         if not OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY not found. Please set it in your .env file")
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
+        
+        # Initialize without any proxy settings
+        try:
+            # Remove any httpx client that might have proxy settings
+            self.client = OpenAI(
+                api_key=OPENAI_API_KEY,
+                http_client=None
+            )
+        except TypeError:
+            # Fallback for older OpenAI library versions
+            try:
+                self.client = OpenAI(api_key=OPENAI_API_KEY)
+            except Exception as e:
+                raise ValueError(f"Failed to initialize OpenAI client: {e}")
     
     def validate_image(self, image_path: str) -> bool:
         """Validate image file format and size."""
