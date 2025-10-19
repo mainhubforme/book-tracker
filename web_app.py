@@ -1,4 +1,36 @@
-#!/usr/bin/env python3
+function updateSubmitButton() {
+        const btn = document.getElementById('submit-books-btn');
+        if (!btn) return;
+        
+        const count = selectedFiles.length;
+        if (count === 0) {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.textContent = 'Add Book(s)';
+        } else {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.textContent = count === 1 ? 'Add 1 Book' : `Add ${count} Books`;
+        }
+    }
+    
+    // FIX #2: Show book details in modal
+    function showBookDetail(bookId) {
+        const bookCard = document.querySelector(`.book-card[data-id="${bookId}"]`);
+        if (!bookCard) return;
+        
+        const title = bookCard.dataset.title;
+        const author = bookCard.dataset.author;
+        const genres = bookCard.dataset.genres;
+        const rating = bookCard.dataset.rating;
+        const addedBy = bookCard.dataset.addedBy;
+        const readBy = bookCard.dataset.readBy;
+        const isRead = bookCard.dataset.read === 'true';
+        
+        // Get additional details from the card
+        const thumbnail = bookCard.querySelector('.book-thumbnail img')?.src || null;
+        const publishDate = bookCard.querySelector('.book-publish-date')?.textContent.replace('📅 Published ', '') || 'Unknown';
+        const summary = book#!/usr/bin/env python3
 """
 Book Tracker Web Interface - Modern UI with Authentication
 Flask web app with camera support, read tracking, and password protection
@@ -25,7 +57,12 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 # In production, set via environment variable: BOOK_TRACKER_PASSWORD
 FAMILY_PASSWORD = os.environ.get('BOOK_TRACKER_PASSWORD', 'bookfamily2024')
 
-db = DatabaseManager()
+# FIX #3: Persistent database - use absolute path
+DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR.mkdir(exist_ok=True)
+DB_PATH = DATA_DIR / "books.db"
+
+db = DatabaseManager(database_url=f"sqlite:///{DB_PATH}")
 
 def login_required(f):
     """Decorator to require login for routes."""
@@ -1235,6 +1272,118 @@ PAGE_TEMPLATE = """
             border-color: var(--accent);
         }
         
+        /* FIX #1: Avatar on cards */
+        .user-avatar-small {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.9em;
+        }
+        
+        .user-avatar-small .avatar-emoji {
+            font-size: 1.1em;
+        }
+        
+        /* FIX #2: Clickable list view */
+        .books-grid.list .book-card {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .books-grid.list .book-card:hover {
+            background: var(--surface-light);
+            transform: translateX(4px);
+        }
+        
+        /* Book detail modal */
+        .book-detail-modal .modal-content {
+            max-width: 700px;
+        }
+        
+        .book-detail-header {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .book-detail-cover {
+            width: 200px;
+            min-width: 200px;
+            height: 300px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4em;
+        }
+        
+        .book-detail-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .book-detail-info {
+            flex: 1;
+        }
+        
+        .book-detail-title {
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        
+        .book-detail-author {
+            font-size: 1.2em;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+        
+        .book-detail-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .book-detail-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        
+        .book-detail-section {
+            margin-bottom: 20px;
+        }
+        
+        .book-detail-section-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .book-detail-section-content {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        .book-detail-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -1293,6 +1442,17 @@ PAGE_TEMPLATE = """
             .emoji-option {
                 font-size: 2em;
                 padding: 8px;
+            }
+            
+            .book-detail-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            
+            .book-detail-cover {
+                width: 180px;
+                height: 270px;
             }
         }
     </style>
@@ -1484,8 +1644,19 @@ PAGE_TEMPLATE = """
                     
                     <div class="book-footer">
                         <div>
-                            {% if book.added_by %}👤 {{ book.added_by }}{% endif %}
-                            {% if book.is_read and book.read_by %}<br>✓ {{ book.read_by }}{% endif %}
+                            {% if book.added_by %}
+                            <span class="user-avatar-small">
+                                <span class="avatar-emoji" data-username="{{ book.added_by }}">👤</span>
+                                {{ book.added_by }}
+                            </span>
+                            {% endif %}
+                            {% if book.is_read and book.read_by %}
+                            <br>
+                            <span class="user-avatar-small">
+                                ✓ <span class="avatar-emoji" data-username="{{ book.read_by }}">👤</span>
+                                {{ book.read_by }}
+                            </span>
+                            {% endif %}
                         </div>
                         <div class="book-actions">
                             {% if book.is_read %}
@@ -1608,6 +1779,19 @@ PAGE_TEMPLATE = """
                     <button type="submit" class="btn camera-btn">Save Profile</button>
                 </div>
             </form>
+        </div>
+    </div>
+    
+    <!-- FIX #2: Book Detail Modal -->
+    <div class="modal book-detail-modal" id="book-detail-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Book Details</h2>
+                <button class="close-btn" onclick="closeModal('book-detail-modal')">&times;</button>
+            </div>
+            <div id="book-detail-content">
+                <!-- Content populated by JavaScript -->
+            </div>
         </div>
     </div>
     
@@ -1792,6 +1976,112 @@ PAGE_TEMPLATE = """
             btn.style.opacity = '1';
             btn.textContent = count === 1 ? 'Add 1 Book' : `Add ${count} Books`;
         }
+    }
+    
+    // FIX #2: Show book details in modal
+    function showBookDetail(bookId) {
+        const bookCard = document.querySelector(`.book-card[data-id="${bookId}"]`);
+        if (!bookCard) return;
+        
+        const title = bookCard.dataset.title;
+        const author = bookCard.dataset.author;
+        const genres = bookCard.dataset.genres;
+        const rating = bookCard.dataset.rating;
+        const addedBy = bookCard.dataset.addedBy;
+        const readBy = bookCard.dataset.readBy;
+        const isRead = bookCard.dataset.read === 'true';
+        
+        // Get additional details from the card
+        const thumbnail = bookCard.querySelector('.book-thumbnail img')?.src || null;
+        const publishDate = bookCard.querySelector('.book-publish-date')?.textContent.replace('📅 Published ', '') || 'Unknown';
+        const summary = bookCard.querySelector('.book-summary')?.textContent || 'No summary available';
+        const awards = bookCard.querySelector('.book-awards')?.textContent.replace('🏆 Awards: ', '') || null;
+        const series = bookCard.querySelector('.badge-series')?.textContent || null;
+        const goodreadsLink = bookCard.querySelector('.goodreads-link')?.href || null;
+        
+        // Get user avatars
+        const addedByAvatar = getUserAvatar(addedBy);
+        const readByAvatar = readBy ? getUserAvatar(readBy) : null;
+        
+        const content = `
+            <div class="book-detail-header">
+                <div class="book-detail-cover">
+                    ${thumbnail ? `<img src="${thumbnail}" alt="${title}">` : '📚'}
+                </div>
+                <div class="book-detail-info">
+                    <div class="book-detail-title">${title}</div>
+                    <div class="book-detail-author">by ${author}</div>
+                    <div class="book-detail-meta">
+                        ${publishDate !== 'Unknown' ? `<div class="book-detail-meta-item">📅 ${publishDate}</div>` : ''}
+                        ${rating > 0 ? `<div class="book-detail-meta-item">⭐ ${rating}/5 Rating</div>` : ''}
+                        ${series ? `<div class="book-detail-meta-item">📖 ${series}</div>` : ''}
+                        ${isRead ? `<div class="book-detail-meta-item">✓ Read by ${readByAvatar} ${readBy}</div>` : '<div class="book-detail-meta-item">📚 Unread</div>'}
+                        <div class="book-detail-meta-item">${addedByAvatar} Added by ${addedBy}</div>
+                    </div>
+                </div>
+            </div>
+            
+            ${genres && genres !== 'Unknown' ? `
+            <div class="book-detail-section">
+                <div class="book-detail-section-title">Genres</div>
+                <div class="book-detail-section-content">
+                    ${genres.split(', ').map(g => `<span class="badge badge-genre" style="margin-right: 6px; margin-bottom: 6px;">${g}</span>`).join('')}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${awards ? `
+            <div class="book-detail-section">
+                <div class="book-detail-section-title">Awards</div>
+                <div class="book-awards">${awards}</div>
+            </div>
+            ` : ''}
+            
+            <div class="book-detail-section">
+                <div class="book-detail-section-title">Summary</div>
+                <div class="book-detail-section-content">${summary}</div>
+            </div>
+            
+            ${goodreadsLink ? `
+            <div class="book-detail-section">
+                <a href="${goodreadsLink}" target="_blank" class="goodreads-link">View on Goodreads →</a>
+            </div>
+            ` : ''}
+            
+            <div class="book-detail-actions">
+                ${!isRead ? `<button class="btn btn-read" onclick="closeModal('book-detail-modal'); showReadModal(${bookId}, '${title.replace(/'/g, "\\'")}');">Mark as Read</button>` : `<button class="btn btn-unread" onclick="closeModal('book-detail-modal'); markUnread(${bookId});">Mark Unread</button>`}
+                <button class="btn btn-delete" onclick="closeModal('book-detail-modal'); deleteBook(${bookId}, '${title.replace(/'/g, "\\'")}');">Delete Book</button>
+            </div>
+        `;
+        
+        document.getElementById('book-detail-content').innerHTML = content;
+        openModal('book-detail-modal');
+    }
+    
+    // FIX #1: Get user avatar emoji from localStorage
+    function getUserAvatar(username) {
+        if (!username) return '👤';
+        
+        // Try to get from a mapping stored in localStorage
+        const avatarMap = JSON.parse(localStorage.getItem('bookTrackerAvatarMap') || '{}');
+        return avatarMap[username] || '👤';
+    }
+    
+    // Update avatar map when user saves profile
+    function updateAvatarMap(username, avatar) {
+        const avatarMap = JSON.parse(localStorage.getItem('bookTrackerAvatarMap') || '{}');
+        avatarMap[username] = avatar;
+        localStorage.setItem('bookTrackerAvatarMap', JSON.stringify(avatarMap));
+    }
+    
+    // Update all avatar emojis on the page
+    function updateAllAvatars() {
+        document.querySelectorAll('.avatar-emoji').forEach(el => {
+            const username = el.dataset.username;
+            if (username) {
+                el.textContent = getUserAvatar(username);
+            }
+        });
     }
     
     // NOW setup event listeners after DOM loads
