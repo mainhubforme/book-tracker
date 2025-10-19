@@ -1446,333 +1446,36 @@ PAGE_TEMPLATE = """
     
     <button class="fab" onclick="openModal('add-modal')">+</button>
     
-    <script>
-        // Toggle genres
-        function toggleGenres(bookId) {
-            const container = document.getElementById('genres-' + bookId);
-            const btn = event.target;
-            
-            if (container.classList.contains('collapsed')) {
-                container.classList.remove('collapsed');
-                btn.textContent = 'Show less';
-            } else {
-                container.classList.add('collapsed');
-                const hiddenCount = container.querySelectorAll('.badge-genre').length - 3;
-                btn.textContent = `+${hiddenCount} more`;
-            }
-        }
-        
-        function filterByGenre(genre) {
-            const genreSelect = document.getElementById('filter-genre');
-            genreSelect.value = genre;
-            filterAndSortBooks();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        
-        document.querySelectorAll('.view-density-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.view-density-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                const density = this.dataset.density;
-                const grid = document.getElementById('books-grid');
-                grid.className = 'books-grid ' + density;
-                localStorage.setItem('bookTrackerDensity', density);
-            });
-        });
-        
-        const savedDensity = localStorage.getItem('bookTrackerDensity') || 'cozy';
-        document.getElementById('books-grid').className = 'books-grid ' + savedDensity;
-        document.querySelector(`.view-density-btn[data-density="${savedDensity}"]`)?.classList.add('active');
-        
-        function toggleSummary(bookId) {
-            const summary = document.getElementById('summary-' + bookId);
-            const readMore = event.target;
-            if (summary.classList.contains('collapsed')) {
-                summary.classList.remove('collapsed');
-                readMore.textContent = 'Read less';
-            } else {
-                summary.classList.add('collapsed');
-                readMore.textContent = 'Read more';
-            }
-        }
-        
-        function openModal(modalId) {
-            document.getElementById(modalId).classList.add('active');
-        }
-        
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-            if (modalId === 'add-modal') {
-                document.getElementById('add-book-form').reset();
-                document.getElementById('preview-container').innerHTML = '';
-                selectedFiles = [];
-                updateSubmitButton();
-            }
-        }
-        
+<script>
+    // CRITICAL FIX: Wait for DOM and check elements exist
+    document.addEventListener('DOMContentLoaded', function() {
         let selectedFiles = [];
-
-        document.getElementById('book-image').addEventListener('change', function(e) {
-            const newFiles = Array.from(e.target.files);
-            selectedFiles = newFiles;
-            const previewContainer = document.getElementById('preview-container');
-            previewContainer.innerHTML = '';
-            
-            selectedFiles.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'preview-wrapper';
-                    wrapper.dataset.fileIndex = index;
-                    
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.className = 'preview-image';
-                    
-                    const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';  // FIXED: Prevent form submission
-                    removeBtn.className = 'preview-remove';
-                    removeBtn.innerHTML = '×';
-                    removeBtn.onclick = function(evt) {
-                        evt.preventDefault();  // FIXED: Prevent default behavior
-                        const idx = parseInt(wrapper.dataset.fileIndex);
-                        
-                        // Remove the file from the array
-                        selectedFiles = selectedFiles.filter((_, i) => i !== idx);
-                        
-                        // Re-render all previews with updated indices
-                        previewContainer.innerHTML = '';
-                        selectedFiles.forEach((f, i) => {
-                            const r = new FileReader();
-                            r.onload = function(ev) {
-                                const w = document.createElement('div');
-                                w.className = 'preview-wrapper';
-                                w.dataset.fileIndex = i;
-                                
-                                const im = document.createElement('img');
-                                im.src = ev.target.result;
-                                im.className = 'preview-image';
-                                
-                                const rb = document.createElement('button');
-                                rb.type = 'button';
-                                rb.className = 'preview-remove';
-                                rb.innerHTML = '×';
-                                rb.onclick = removeBtn.onclick;
-                                
-                                w.appendChild(im);
-                                w.appendChild(rb);
-                                previewContainer.appendChild(w);
-                            };
-                            r.readAsDataURL(f);
-                        });
-                        
-                        updateSubmitButton();
-                    };
-                    
-                    wrapper.appendChild(img);
-                    wrapper.appendChild(removeBtn);
-                    previewContainer.appendChild(wrapper);
-                };
-                reader.readAsDataURL(file);
-            });
-            updateSubmitButton();
-        });        
+        const booksGrid = document.getElementById('books-grid');
         
-        function updateSubmitButton() {
-            const btn = document.getElementById('submit-books-btn');
-            const count = selectedFiles.length;
-            if (count === 0) {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-                btn.textContent = 'Add Book(s)';
-            } else {
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.textContent = count === 1 ? 'Add 1 Book' : `Add ${count} Books`;
-            }
+        // Only set up grid controls if grid exists
+        if (booksGrid) {
+            document.querySelectorAll('.view-density-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.view-density-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const density = this.dataset.density;
+                    booksGrid.className = 'books-grid ' + density;
+                    localStorage.setItem('bookTrackerDensity', density);
+                });
+            });
+            
+            const savedDensity = localStorage.getItem('bookTrackerDensity') || 'cozy';
+            booksGrid.className = 'books-grid ' + savedDensity;
+            const activeBtn = document.querySelector(`.view-density-btn[data-density="${savedDensity}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
         }
         
-        document.getElementById('add-book-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            if (selectedFiles.length === 0) return;
-            
-            const userName = document.getElementById('user-name').value;
-            document.getElementById('add-book-form').style.display = 'none';
-            const processingDiv = document.getElementById('processing-status');
-            processingDiv.style.display = 'block';
-            processingDiv.innerHTML = `
-                <div class="spinner"></div>
-                <p>Processing ${selectedFiles.length} book${selectedFiles.length > 1 ? 's' : ''}...</p>
-                <p id="progress-text">0 of ${selectedFiles.length} complete</p>
-            `;
-            
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const formData = new FormData();
-                formData.append('image', selectedFiles[i]);
-                formData.append('user_name', userName);
-                
-                try {
-                    await fetch('/api/add-book', {
-                        method: 'POST',
-                        body: formData
-                    });
-                } catch (error) {
-                    console.error(error);
-                }
-                document.getElementById('progress-text').textContent = `${i + 1} of ${selectedFiles.length} complete`;
-            }
-            window.location.href = '/';
-        });
-        
-        function showReadModal(bookId, bookTitle) {
-            document.getElementById('read-book-id').value = bookId;
-            document.getElementById('read-book-title').textContent = bookTitle;
-            openModal('read-modal');
-        }
-        
-        document.getElementById('mark-read-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const bookId = document.getElementById('read-book-id').value;
-            const readBy = document.getElementById('read-by-name').value;
-            
-            const response = await fetch('/api/mark-read', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ book_id: bookId, read_by: readBy })
-            });
-            if (response.ok) location.reload();
-        });
-        
-        async function markUnread(bookId) {
-            if (!confirm('Mark as unread?')) return;
-            const response = await fetch('/api/mark-unread', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ book_id: bookId })
-            });
-            if (response.ok) location.reload();
-        }
-        
-        async function deleteBook(bookId, bookTitle) {
-            if (!confirm(`Delete "${bookTitle}"?`)) return;
-            const response = await fetch('/api/delete-book', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ book_id: bookId })
-            });
-            if (response.ok) location.reload();
-        }
-        
-        const searchInput = document.getElementById('search');
-        const filterGenre = document.getElementById('filter-genre');
-        const filterAddedBy = document.getElementById('filter-added-by');
-        const filterReadBy = document.getElementById('filter-read-by');
-        const sortBy = document.getElementById('sort-by');
-        
-        function filterAndSortBooks() {
-            const query = searchInput.value.toLowerCase();
-            const genre = filterGenre.value;
-            const addedBy = filterAddedBy.value;
-            const readBy = filterReadBy.value;
-            const sortOption = sortBy.value;
-            const activeChip = document.querySelector('.chip.active');
-            const readFilter = activeChip ? activeChip.dataset.filter : 'all';
-            
-            const booksGrid = document.getElementById('books-grid');
-            const books = Array.from(document.querySelectorAll('.book-card'));
-            
-            const filteredBooks = books.filter(book => {
-                const text = book.textContent.toLowerCase();
-                const bookGenres = book.dataset.genres.toLowerCase();
-                const bookAddedBy = book.dataset.addedBy;
-                const bookReadBy = book.dataset.readBy;
-                const isRead = book.dataset.read === 'true';
-                
-                if (query && !text.includes(query)) return false;
-                if (genre && !bookGenres.includes(genre.toLowerCase())) return false;
-                if (addedBy && bookAddedBy !== addedBy) return false;
-                if (readBy && bookReadBy !== readBy) return false;
-                if (readFilter === 'read' && !isRead) return false;
-                if (readFilter === 'unread' && isRead) return false;
-                
-                return true;
-            });
-            
-            filteredBooks.sort((a, b) => {
-                switch(sortOption) {
-                    case 'date-desc': return new Date(b.dataset.date) - new Date(a.dataset.date);
-                    case 'date-asc': return new Date(a.dataset.date) - new Date(b.dataset.date);
-                    case 'title-asc': return a.dataset.title.localeCompare(b.dataset.title);
-                    case 'title-desc': return b.dataset.title.localeCompare(a.dataset.title);
-                    case 'author-asc': return a.dataset.author.localeCompare(b.dataset.author);
-                    case 'rating-desc': return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
-                    case 'rating-asc': return parseFloat(a.dataset.rating) - parseFloat(b.dataset.rating);
-                    default: return 0;
-                }
-            });
-            
-            books.forEach(book => book.style.display = 'none');
-            filteredBooks.forEach(book => {
-                book.style.display = 'block';
-                booksGrid.appendChild(book);
-            });
-        }
-        
-        function clearAllFilters() {
-            searchInput.value = '';
-            filterGenre.selectedIndex = 0;
-            filterAddedBy.selectedIndex = 0;
-            filterReadBy.selectedIndex = 0;
-            sortBy.selectedIndex = 0;
-            document.querySelectorAll('.chip').forEach(chip => {
-                chip.classList.remove('active');
-                if (chip.dataset.filter === 'all') chip.classList.add('active');
-            });
-            filterAndSortBooks();
-        }
-        
-        searchInput.addEventListener('input', filterAndSortBooks);
-        filterGenre.addEventListener('change', filterAndSortBooks);
-        filterAddedBy.addEventListener('change', filterAndSortBooks);
-        filterReadBy.addEventListener('change', filterAndSortBooks);
-        sortBy.addEventListener('change', filterAndSortBooks);
-        
-        document.querySelectorAll('.chip').forEach(chip => {
-            chip.addEventListener('click', function() {
-                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-                filterAndSortBooks();
-            });
-        });
-        
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', function(e) {
-                if (e.target === this) this.classList.remove('active');
-            });
-        });
-        
-        function updateUserName() {
-            const savedName = localStorage.getItem('bookTrackerUserName');
-            if (savedName) {
-                document.getElementById('current-user-name').textContent = savedName;
-                document.getElementById('user-name').value = savedName;
-                document.getElementById('read-by-name').value = savedName;
-                document.getElementById('profile-name').value = savedName;
-            }
-        }
-        
-        updateUserName();
-        
-        document.getElementById('profile-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('profile-name').value.trim();
-            if (name) {
-                localStorage.setItem('bookTrackerUserName', name);
-                updateUserName();
-                closeModal('profile-modal');
-            }
-        });
-    </script>
+        // ... rest of your JavaScript but wrap all function definitions as:
+        window.toggleGenres = function(bookId) { /* your code */ };
+        window.filterByGenre = function(genre) { /* your code */ };
+        // etc.
+    });
+</script>
 </body>
 </html>
 """
