@@ -1447,8 +1447,11 @@ PAGE_TEMPLATE = """
     <button class="fab" onclick="openModal('add-modal')">+</button>
     
     <script>
-        // Toggle genres
-        function toggleGenres(bookId) {
+            // CRITICAL: Declare at very top of script
+            let selectedFiles = [];
+            
+            // Toggle genres
+            function toggleGenres(bookId) {
             const container = document.getElementById('genres-' + bookId);
             const btn = event.target;
             
@@ -1510,11 +1513,11 @@ PAGE_TEMPLATE = """
             }
         }
         
-        let selectedFiles = [];
 
         document.getElementById('book-image').addEventListener('change', function(e) {
             const newFiles = Array.from(e.target.files);
             selectedFiles = newFiles;
+            console.log('Files selected:', selectedFiles.length);
             const previewContainer = document.getElementById('preview-container');
             previewContainer.innerHTML = '';
             
@@ -1530,17 +1533,13 @@ PAGE_TEMPLATE = """
                     img.className = 'preview-image';
                     
                     const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';  // FIXED: Prevent form submission
+                    removeBtn.type = 'button';
                     removeBtn.className = 'preview-remove';
                     removeBtn.innerHTML = '×';
                     removeBtn.onclick = function(evt) {
-                        evt.preventDefault();  // FIXED: Prevent default behavior
+                        evt.preventDefault();
                         const idx = parseInt(wrapper.dataset.fileIndex);
-                        
-                        // Remove the file from the array
                         selectedFiles = selectedFiles.filter((_, i) => i !== idx);
-                        
-                        // Re-render all previews with updated indices
                         previewContainer.innerHTML = '';
                         selectedFiles.forEach((f, i) => {
                             const r = new FileReader();
@@ -1548,27 +1547,22 @@ PAGE_TEMPLATE = """
                                 const w = document.createElement('div');
                                 w.className = 'preview-wrapper';
                                 w.dataset.fileIndex = i;
-                                
                                 const im = document.createElement('img');
                                 im.src = ev.target.result;
                                 im.className = 'preview-image';
-                                
                                 const rb = document.createElement('button');
                                 rb.type = 'button';
                                 rb.className = 'preview-remove';
                                 rb.innerHTML = '×';
                                 rb.onclick = removeBtn.onclick;
-                                
                                 w.appendChild(im);
                                 w.appendChild(rb);
                                 previewContainer.appendChild(w);
                             };
                             r.readAsDataURL(f);
                         });
-                        
                         updateSubmitButton();
                     };
-                    
                     wrapper.appendChild(img);
                     wrapper.appendChild(removeBtn);
                     previewContainer.appendChild(wrapper);
@@ -1577,71 +1571,6 @@ PAGE_TEMPLATE = """
             });
             updateSubmitButton();
         });        
-        
-        function updateSubmitButton() {
-            const btn = document.getElementById('submit-books-btn');
-            const count = selectedFiles.length;
-            if (count === 0) {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-                btn.textContent = 'Add Book(s)';
-            } else {
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.textContent = count === 1 ? 'Add 1 Book' : `Add ${count} Books`;
-            }
-        }
-        
-        document.getElementById('add-book-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            if (selectedFiles.length === 0) return;
-            
-            const userName = document.getElementById('user-name').value;
-            document.getElementById('add-book-form').style.display = 'none';
-            const processingDiv = document.getElementById('processing-status');
-            processingDiv.style.display = 'block';
-            processingDiv.innerHTML = `
-                <div class="spinner"></div>
-                <p>Processing ${selectedFiles.length} book${selectedFiles.length > 1 ? 's' : ''}...</p>
-                <p id="progress-text">0 of ${selectedFiles.length} complete</p>
-            `;
-            
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const formData = new FormData();
-                formData.append('image', selectedFiles[i]);
-                formData.append('user_name', userName);
-                
-                try {
-                    await fetch('/api/add-book', {
-                        method: 'POST',
-                        body: formData
-                    });
-                } catch (error) {
-                    console.error(error);
-                }
-                document.getElementById('progress-text').textContent = `${i + 1} of ${selectedFiles.length} complete`;
-            }
-            window.location.href = '/';
-        });
-        
-        function showReadModal(bookId, bookTitle) {
-            document.getElementById('read-book-id').value = bookId;
-            document.getElementById('read-book-title').textContent = bookTitle;
-            openModal('read-modal');
-        }
-        
-        document.getElementById('mark-read-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const bookId = document.getElementById('read-book-id').value;
-            const readBy = document.getElementById('read-by-name').value;
-            
-            const response = await fetch('/api/mark-read', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ book_id: bookId, read_by: readBy })
-            });
-            if (response.ok) location.reload();
-        });
         
         async function markUnread(bookId) {
             if (!confirm('Mark as unread?')) return;
