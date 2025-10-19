@@ -1742,12 +1742,22 @@ PAGE_TEMPLATE = """
                     formData.append('user_name', userName);
                     
                     try {
-                        await fetch('/api/add-book', {
+                        const response = await fetch('/api/add-book', {
                             method: 'POST',
                             body: formData
                         });
+                        const result = await response.json();
+                        
+                        if (!result.success) {
+                            console.error('Failed to add book:', result.error);
+                            alert(`Failed to add book ${i + 1}: ${result.error}`);
+                            // Continue with next book
+                        } else {
+                            console.log(`Book ${i + 1} added successfully:`, result.book_id);
+                        }
                     } catch (error) {
-                        console.error(error);
+                        console.error('Network error:', error);
+                        alert(`Network error on book ${i + 1}: ${error.message}`);
                     }
                     const progressText = document.getElementById('progress-text');
                     if (progressText) {
@@ -1913,36 +1923,62 @@ def api_search():
 def api_add_book():
     """API endpoint to add a new book from uploaded image."""
     try:
+        print("=== ADD BOOK API CALLED ===")
+        
         if 'image' not in request.files:
+            print("ERROR: No image in request")
             return jsonify({'success': False, 'error': 'No image provided'})
         
         file = request.files['image']
         user_name = request.form.get('user_name', 'Unknown')
         
+        print(f"File: {file.filename}, User: {user_name}")
+        
         if file.filename == '':
+            print("ERROR: Empty filename")
             return jsonify({'success': False, 'error': 'No file selected'})
         
+        # Save to temp file
         temp_dir = tempfile.mkdtemp()
         temp_path = Path(temp_dir) / file.filename
         file.save(str(temp_path))
+        print(f"Saved to: {temp_path}")
         
+        # Process image
+        print("Initializing ImageProcessor...")
         processor = ImageProcessor()
+        
+        print("Extracting book info from image...")
         book_info = processor.extract_book_info(str(temp_path))
         
         if not book_info:
-            return jsonify({'success': False, 'error': 'Failed to extract book information'})
+            print("ERROR: Failed to extract book info")
+            return jsonify({'success': False, 'error': 'Failed to extract book information from image'})
         
+        print(f"Extracted: {book_info.get('title')} by {book_info.get('author')}")
+        
+        # Enrich data
+        print("Enriching book data...")
         enricher = BookEnricher()
         enriched_data = enricher.enrich_book_data(book_info, use_goodreads=True)
         enriched_data['added_by'] = user_name
         
+        print("Saving to database...")
         book = db.add_book(enriched_data)
         
+        print(f"SUCCESS: Book #{book.id} added!")
         return jsonify({'success': True, 'book_id': book.id})
         
     except Exception as e:
-        print(f"Error adding book: {e}")
-        return jsonify({'success': False, 'error': str(e)})
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"ERROR in api_add_book:")
+        print(error_details)
+        return jsonify({
+            'success': False, 
+            'error': str(e),
+            'details': error_details
+        })
 
 @app.route('/api/mark-read', methods=['POST'])
 @login_required
