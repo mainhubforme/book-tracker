@@ -1385,9 +1385,9 @@ PAGE_TEMPLATE = """
                 </div>
                 <div class="form-group">
                     <label>Book Cover Photo</label>
-                    <input type="file" id="book-image" name="image" accept="image/*" capture="environment" class="camera-input" multiple required>
+                    <input type="file" id="book-image" name="image" accept="image/*" class="camera-input" multiple required>
                     <button type="button" class="camera-btn" onclick="document.getElementById('book-image').click()">
-                        📷 Take Photo or Upload
+                        📷 Take Photo or Select from Library
                     </button>
                     <div id="preview-container" style="margin-top: 15px;"></div>
                 </div>
