@@ -1450,11 +1450,8 @@ PAGE_TEMPLATE = """
         // CRITICAL: Declare at very top of script
         let selectedFiles = [];
         
-        // Wait for DOM to be ready
-        document.addEventListener('DOMContentLoaded', function() {
-            
-            // Toggle genres
-            function toggleGenres(bookId) {
+        // Function declarations (outside DOMContentLoaded so inline onclick works)
+        function toggleGenres(bookId) {
             const container = document.getElementById('genres-' + bookId);
             const btn = event.target;
             
@@ -1474,21 +1471,6 @@ PAGE_TEMPLATE = """
             filterAndSortBooks();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-        
-        document.querySelectorAll('.view-density-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.view-density-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                const density = this.dataset.density;
-                const grid = document.getElementById('books-grid');
-                grid.className = 'books-grid ' + density;
-                localStorage.setItem('bookTrackerDensity', density);
-            });
-        });
-        
-        const savedDensity = localStorage.getItem('bookTrackerDensity') || 'cozy';
-        document.getElementById('books-grid').className = 'books-grid ' + savedDensity;
-        document.querySelector(`.view-density-btn[data-density="${savedDensity}"]`)?.classList.add('active');
         
         function toggleSummary(bookId) {
             const summary = document.getElementById('summary-' + bookId);
@@ -1516,65 +1498,6 @@ PAGE_TEMPLATE = """
             }
         }
         
-
-        document.getElementById('book-image').addEventListener('change', function(e) {
-            const newFiles = Array.from(e.target.files);
-            selectedFiles = newFiles;
-            console.log('Files selected:', selectedFiles.length);
-            const previewContainer = document.getElementById('preview-container');
-            previewContainer.innerHTML = '';
-            
-            selectedFiles.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'preview-wrapper';
-                    wrapper.dataset.fileIndex = index;
-                    
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.className = 'preview-image';
-                    
-                    const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.className = 'preview-remove';
-                    removeBtn.innerHTML = '×';
-                    removeBtn.onclick = function(evt) {
-                        evt.preventDefault();
-                        const idx = parseInt(wrapper.dataset.fileIndex);
-                        selectedFiles = selectedFiles.filter((_, i) => i !== idx);
-                        previewContainer.innerHTML = '';
-                        selectedFiles.forEach((f, i) => {
-                            const r = new FileReader();
-                            r.onload = function(ev) {
-                                const w = document.createElement('div');
-                                w.className = 'preview-wrapper';
-                                w.dataset.fileIndex = i;
-                                const im = document.createElement('img');
-                                im.src = ev.target.result;
-                                im.className = 'preview-image';
-                                const rb = document.createElement('button');
-                                rb.type = 'button';
-                                rb.className = 'preview-remove';
-                                rb.innerHTML = '×';
-                                rb.onclick = removeBtn.onclick;
-                                w.appendChild(im);
-                                w.appendChild(rb);
-                                previewContainer.appendChild(w);
-                            };
-                            r.readAsDataURL(f);
-                        });
-                        updateSubmitButton();
-                    };
-                    wrapper.appendChild(img);
-                    wrapper.appendChild(removeBtn);
-                    previewContainer.appendChild(wrapper);
-                };
-                reader.readAsDataURL(file);
-            });
-            updateSubmitButton();
-        });        
-        
         async function markUnread(bookId) {
             if (!confirm('Mark as unread?')) return;
             const response = await fetch('/api/mark-unread', {
@@ -1595,13 +1518,19 @@ PAGE_TEMPLATE = """
             if (response.ok) location.reload();
         }
         
-        const searchInput = document.getElementById('search');
-        const filterGenre = document.getElementById('filter-genre');
-        const filterAddedBy = document.getElementById('filter-added-by');
-        const filterReadBy = document.getElementById('filter-read-by');
-        const sortBy = document.getElementById('sort-by');
+        function showReadModal(bookId, bookTitle) {
+            document.getElementById('read-book-id').value = bookId;
+            document.getElementById('read-book-title').textContent = bookTitle;
+            openModal('read-modal');
+        }
         
         function filterAndSortBooks() {
+            const searchInput = document.getElementById('search');
+            const filterGenre = document.getElementById('filter-genre');
+            const filterAddedBy = document.getElementById('filter-added-by');
+            const filterReadBy = document.getElementById('filter-read-by');
+            const sortBy = document.getElementById('sort-by');
+            
             const query = searchInput.value.toLowerCase();
             const genre = filterGenre.value;
             const addedBy = filterAddedBy.value;
@@ -1651,6 +1580,12 @@ PAGE_TEMPLATE = """
         }
         
         function clearAllFilters() {
+            const searchInput = document.getElementById('search');
+            const filterGenre = document.getElementById('filter-genre');
+            const filterAddedBy = document.getElementById('filter-added-by');
+            const filterReadBy = document.getElementById('filter-read-by');
+            const sortBy = document.getElementById('sort-by');
+            
             searchInput.value = '';
             filterGenre.selectedIndex = 0;
             filterAddedBy.selectedIndex = 0;
@@ -1663,39 +1598,231 @@ PAGE_TEMPLATE = """
             filterAndSortBooks();
         }
         
-        searchInput.addEventListener('input', filterAndSortBooks);
-        filterGenre.addEventListener('change', filterAndSortBooks);
-        filterAddedBy.addEventListener('change', filterAndSortBooks);
-        filterReadBy.addEventListener('change', filterAndSortBooks);
-        sortBy.addEventListener('change', filterAndSortBooks);
-        
-        document.querySelectorAll('.chip').forEach(chip => {
-            chip.addEventListener('click', function() {
-                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-                filterAndSortBooks();
-            });
-        });
-        
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', function(e) {
-                if (e.target === this) this.classList.remove('active');
-            });
-        });
-        
         function updateUserName() {
             const savedName = localStorage.getItem('bookTrackerUserName');
             if (savedName) {
-                document.getElementById('current-user-name').textContent = savedName;
-                document.getElementById('user-name').value = savedName;
-                document.getElementById('read-by-name').value = savedName;
-                document.getElementById('profile-name').value = savedName;
+                const currentUserNameEl = document.getElementById('current-user-name');
+                const userNameEl = document.getElementById('user-name');
+                const readByNameEl = document.getElementById('read-by-name');
+                const profileNameEl = document.getElementById('profile-name');
+                
+                if (currentUserNameEl) currentUserNameEl.textContent = savedName;
+                if (userNameEl) userNameEl.value = savedName;
+                if (readByNameEl) readByNameEl.value = savedName;
+                if (profileNameEl) profileNameEl.value = savedName;
             }
         }
         
-        updateUserName();
-                
-                document.getElementById('profile-form').addEventListener('submit', function(e) {
+        function updateSubmitButton() {
+            const submitBtn = document.getElementById('submit-books-btn');
+            if (submitBtn) {
+                if (selectedFiles.length > 0) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                } else {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.5';
+                }
+            }
+        }
+        
+        // DOM Ready - Initialize everything that needs DOM elements
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // View density buttons
+            const densityBtns = document.querySelectorAll('.view-density-btn');
+            if (densityBtns.length > 0) {
+                densityBtns.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        densityBtns.forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        const density = this.dataset.density;
+                        const grid = document.getElementById('books-grid');
+                        if (grid) {
+                            grid.className = 'books-grid ' + density;
+                            localStorage.setItem('bookTrackerDensity', density);
+                        }
+                    });
+                });
+            }
+            
+            // Restore saved density
+            const savedDensity = localStorage.getItem('bookTrackerDensity') || 'cozy';
+            const booksGrid = document.getElementById('books-grid');
+            if (booksGrid) {
+                booksGrid.className = 'books-grid ' + savedDensity;
+            }
+            const activeDensityBtn = document.querySelector(`.view-density-btn[data-density="${savedDensity}"]`);
+            if (activeDensityBtn) {
+                activeDensityBtn.classList.add('active');
+            }
+            
+            // File input change handler
+            const bookImageInput = document.getElementById('book-image');
+            if (bookImageInput) {
+                bookImageInput.addEventListener('change', function(e) {
+                    const newFiles = Array.from(e.target.files);
+                    selectedFiles = newFiles;
+                    console.log('Files selected:', selectedFiles.length);
+                    const previewContainer = document.getElementById('preview-container');
+                    if (!previewContainer) return;
+                    
+                    previewContainer.innerHTML = '';
+                    
+                    selectedFiles.forEach((file, index) => {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'preview-wrapper';
+                            wrapper.dataset.fileIndex = index;
+                            
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.className = 'preview-image';
+                            
+                            const removeBtn = document.createElement('button');
+                            removeBtn.type = 'button';
+                            removeBtn.className = 'preview-remove';
+                            removeBtn.innerHTML = '×';
+                            removeBtn.onclick = function(evt) {
+                                evt.preventDefault();
+                                const idx = parseInt(wrapper.dataset.fileIndex);
+                                selectedFiles = selectedFiles.filter((_, i) => i !== idx);
+                                previewContainer.innerHTML = '';
+                                selectedFiles.forEach((f, i) => {
+                                    const r = new FileReader();
+                                    r.onload = function(ev) {
+                                        const w = document.createElement('div');
+                                        w.className = 'preview-wrapper';
+                                        w.dataset.fileIndex = i;
+                                        const im = document.createElement('img');
+                                        im.src = ev.target.result;
+                                        im.className = 'preview-image';
+                                        const rb = document.createElement('button');
+                                        rb.type = 'button';
+                                        rb.className = 'preview-remove';
+                                        rb.innerHTML = '×';
+                                        rb.onclick = removeBtn.onclick;
+                                        w.appendChild(im);
+                                        w.appendChild(rb);
+                                        previewContainer.appendChild(w);
+                                    };
+                                    r.readAsDataURL(f);
+                                });
+                                updateSubmitButton();
+                            };
+                            wrapper.appendChild(img);
+                            wrapper.appendChild(removeBtn);
+                            previewContainer.appendChild(wrapper);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                    updateSubmitButton();
+                });
+            }
+            
+            // Add book form submit
+            const addBookForm = document.getElementById('add-book-form');
+            if (addBookForm) {
+                addBookForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const userName = document.getElementById('user-name').value;
+                    const processingStatus = document.getElementById('processing-status');
+                    const form = this;
+                    
+                    if (selectedFiles.length === 0) {
+                        alert('Please select at least one book image');
+                        return;
+                    }
+                    
+                    if (processingStatus) {
+                        processingStatus.style.display = 'block';
+                    }
+                    form.style.display = 'none';
+                    
+                    try {
+                        for (const file of selectedFiles) {
+                            const formData = new FormData();
+                            formData.append('image', file);
+                            formData.append('user_name', userName);
+                            
+                            const response = await fetch('/api/add-book', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            
+                            const result = await response.json();
+                            if (!result.success) {
+                                console.error('Failed to add book:', result.error);
+                            }
+                        }
+                        
+                        location.reload();
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error adding books. Please try again.');
+                        if (processingStatus) {
+                            processingStatus.style.display = 'none';
+                        }
+                        form.style.display = 'block';
+                    }
+                });
+            }
+            
+            // Mark read form submit
+            const markReadForm = document.getElementById('mark-read-form');
+            if (markReadForm) {
+                markReadForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const bookId = document.getElementById('read-book-id').value;
+                    const readBy = document.getElementById('read-by-name').value;
+                    
+                    const response = await fetch('/api/mark-read', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ book_id: parseInt(bookId), read_by: readBy })
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    }
+                });
+            }
+            
+            // Search and filter event listeners
+            const searchInput = document.getElementById('search');
+            const filterGenre = document.getElementById('filter-genre');
+            const filterAddedBy = document.getElementById('filter-added-by');
+            const filterReadBy = document.getElementById('filter-read-by');
+            const sortBy = document.getElementById('sort-by');
+            
+            if (searchInput) searchInput.addEventListener('input', filterAndSortBooks);
+            if (filterGenre) filterGenre.addEventListener('change', filterAndSortBooks);
+            if (filterAddedBy) filterAddedBy.addEventListener('change', filterAndSortBooks);
+            if (filterReadBy) filterReadBy.addEventListener('change', filterAndSortBooks);
+            if (sortBy) sortBy.addEventListener('change', filterAndSortBooks);
+            
+            // Filter chips
+            document.querySelectorAll('.chip').forEach(chip => {
+                chip.addEventListener('click', function() {
+                    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    filterAndSortBooks();
+                });
+            });
+            
+            // Modal click outside to close
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) this.classList.remove('active');
+                });
+            });
+            
+            // Profile form submit
+            const profileForm = document.getElementById('profile-form');
+            if (profileForm) {
+                profileForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     const name = document.getElementById('profile-name').value.trim();
                     if (name) {
@@ -1704,9 +1831,14 @@ PAGE_TEMPLATE = """
                         closeModal('profile-modal');
                     }
                 });
-                
-            }); // Close DOMContentLoaded
-</script>
+            }
+            
+            // Initialize user name
+            updateUserName();
+            
+            // Initialize submit button state
+            updateSubmitButton();
+        });
     </script>
 </body>
 </html>
