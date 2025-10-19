@@ -1447,12 +1447,191 @@ PAGE_TEMPLATE = """
     <button class="fab" onclick="openModal('add-modal')">+</button>
     
 <script>
-    // CRITICAL FIX: Wait for DOM and check elements exist
+    // Define global functions FIRST (before DOMContentLoaded) for inline onclick
+    let selectedFiles = [];
+    
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.add('active');
+    }
+    
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('active');
+            if (modalId === 'add-modal') {
+                const form = document.getElementById('add-book-form');
+                if (form) form.reset();
+                const preview = document.getElementById('preview-container');
+                if (preview) preview.innerHTML = '';
+                selectedFiles = [];
+                updateSubmitButton();
+            }
+        }
+    }
+    
+    function toggleGenres(bookId) {
+        const container = document.getElementById('genres-' + bookId);
+        const btn = event.target;
+        if (!container) return;
+        
+        if (container.classList.contains('collapsed')) {
+            container.classList.remove('collapsed');
+            btn.textContent = 'Show less';
+        } else {
+            container.classList.add('collapsed');
+            const hiddenCount = container.querySelectorAll('.badge-genre').length - 3;
+            btn.textContent = `+${hiddenCount} more`;
+        }
+    }
+    
+    function filterByGenre(genre) {
+        const genreSelect = document.getElementById('filter-genre');
+        if (genreSelect) {
+            genreSelect.value = genre;
+            filterAndSortBooks();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+    
+    function toggleSummary(bookId) {
+        const summary = document.getElementById('summary-' + bookId);
+        const readMore = event.target;
+        if (!summary) return;
+        
+        if (summary.classList.contains('collapsed')) {
+            summary.classList.remove('collapsed');
+            readMore.textContent = 'Read less';
+        } else {
+            summary.classList.add('collapsed');
+            readMore.textContent = 'Read more';
+        }
+    }
+    
+    async function markUnread(bookId) {
+        if (!confirm('Mark as unread?')) return;
+        const response = await fetch('/api/mark-unread', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ book_id: bookId })
+        });
+        if (response.ok) location.reload();
+    }
+    
+    async function deleteBook(bookId, bookTitle) {
+        if (!confirm(`Delete "${bookTitle}"?`)) return;
+        const response = await fetch('/api/delete-book', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ book_id: bookId })
+        });
+        if (response.ok) location.reload();
+    }
+    
+    function showReadModal(bookId, bookTitle) {
+        document.getElementById('read-book-id').value = bookId;
+        document.getElementById('read-book-title').textContent = bookTitle;
+        openModal('read-modal');
+    }
+    
+    function clearAllFilters() {
+        const searchInput = document.getElementById('search');
+        const filterGenre = document.getElementById('filter-genre');
+        const filterAddedBy = document.getElementById('filter-added-by');
+        const filterReadBy = document.getElementById('filter-read-by');
+        const sortBy = document.getElementById('sort-by');
+        
+        if (searchInput) searchInput.value = '';
+        if (filterGenre) filterGenre.selectedIndex = 0;
+        if (filterAddedBy) filterAddedBy.selectedIndex = 0;
+        if (filterReadBy) filterReadBy.selectedIndex = 0;
+        if (sortBy) sortBy.selectedIndex = 0;
+        
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.classList.remove('active');
+            if (chip.dataset.filter === 'all') chip.classList.add('active');
+        });
+        filterAndSortBooks();
+    }
+    
+    function filterAndSortBooks() {
+        const booksGrid = document.getElementById('books-grid');
+        if (!booksGrid) return;
+        
+        const searchInput = document.getElementById('search');
+        const filterGenre = document.getElementById('filter-genre');
+        const filterAddedBy = document.getElementById('filter-added-by');
+        const filterReadBy = document.getElementById('filter-read-by');
+        const sortBy = document.getElementById('sort-by');
+        
+        const query = searchInput ? searchInput.value.toLowerCase() : '';
+        const genre = filterGenre ? filterGenre.value : '';
+        const addedBy = filterAddedBy ? filterAddedBy.value : '';
+        const readBy = filterReadBy ? filterReadBy.value : '';
+        const sortOption = sortBy ? sortBy.value : 'date-desc';
+        const activeChip = document.querySelector('.chip.active');
+        const readFilter = activeChip ? activeChip.dataset.filter : 'all';
+        
+        const books = Array.from(document.querySelectorAll('.book-card'));
+        
+        const filteredBooks = books.filter(book => {
+            const text = book.textContent.toLowerCase();
+            const bookGenres = book.dataset.genres.toLowerCase();
+            const bookAddedBy = book.dataset.addedBy;
+            const bookReadBy = book.dataset.readBy;
+            const isRead = book.dataset.read === 'true';
+            
+            if (query && !text.includes(query)) return false;
+            if (genre && !bookGenres.includes(genre.toLowerCase())) return false;
+            if (addedBy && bookAddedBy !== addedBy) return false;
+            if (readBy && bookReadBy !== readBy) return false;
+            if (readFilter === 'read' && !isRead) return false;
+            if (readFilter === 'unread' && isRead) return false;
+            
+            return true;
+        });
+        
+        filteredBooks.sort((a, b) => {
+            switch(sortOption) {
+                case 'date-desc': return new Date(b.dataset.date) - new Date(a.dataset.date);
+                case 'date-asc': return new Date(a.dataset.date) - new Date(b.dataset.date);
+                case 'title-asc': return a.dataset.title.localeCompare(b.dataset.title);
+                case 'title-desc': return b.dataset.title.localeCompare(a.dataset.title);
+                case 'author-asc': return a.dataset.author.localeCompare(b.dataset.author);
+                case 'rating-desc': return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
+                case 'rating-asc': return parseFloat(a.dataset.rating) - parseFloat(b.dataset.rating);
+                default: return 0;
+            }
+        });
+        
+        books.forEach(book => book.style.display = 'none');
+        filteredBooks.forEach(book => {
+            book.style.display = 'block';
+            booksGrid.appendChild(book);
+        });
+    }
+    
+    function updateSubmitButton() {
+        const btn = document.getElementById('submit-books-btn');
+        if (!btn) return;
+        
+        const count = selectedFiles.length;
+        if (count === 0) {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.textContent = 'Add Book(s)';
+        } else {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.textContent = count === 1 ? 'Add 1 Book' : `Add ${count} Books`;
+        }
+    }
+    
+    // NOW setup event listeners after DOM loads
     document.addEventListener('DOMContentLoaded', function() {
-        let selectedFiles = [];
         const booksGrid = document.getElementById('books-grid');
         
-        // Only set up grid controls if grid exists
+        // View density buttons
         if (booksGrid) {
             document.querySelectorAll('.view-density-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -1470,10 +1649,196 @@ PAGE_TEMPLATE = """
             if (activeBtn) activeBtn.classList.add('active');
         }
         
-        // ... rest of your JavaScript but wrap all function definitions as:
-        window.toggleGenres = function(bookId) { /* your code */ };
-        window.filterByGenre = function(genre) { /* your code */ };
-        // etc.
+        // File input
+        const bookImageInput = document.getElementById('book-image');
+        if (bookImageInput) {
+            bookImageInput.addEventListener('change', function(e) {
+                const newFiles = Array.from(e.target.files);
+                selectedFiles = newFiles;
+                const previewContainer = document.getElementById('preview-container');
+                if (!previewContainer) return;
+                
+                previewContainer.innerHTML = '';
+                
+                selectedFiles.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'preview-wrapper';
+                        wrapper.dataset.fileIndex = index;
+                        
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'preview-image';
+                        
+                        const removeBtn = document.createElement('button');
+                        removeBtn.type = 'button';
+                        removeBtn.className = 'preview-remove';
+                        removeBtn.innerHTML = '×';
+                        removeBtn.onclick = function(evt) {
+                            evt.preventDefault();
+                            const idx = parseInt(wrapper.dataset.fileIndex);
+                            selectedFiles = selectedFiles.filter((_, i) => i !== idx);
+                            
+                            previewContainer.innerHTML = '';
+                            selectedFiles.forEach((f, i) => {
+                                const r = new FileReader();
+                                r.onload = function(ev) {
+                                    const w = document.createElement('div');
+                                    w.className = 'preview-wrapper';
+                                    w.dataset.fileIndex = i;
+                                    
+                                    const im = document.createElement('img');
+                                    im.src = ev.target.result;
+                                    im.className = 'preview-image';
+                                    
+                                    const rb = document.createElement('button');
+                                    rb.type = 'button';
+                                    rb.className = 'preview-remove';
+                                    rb.innerHTML = '×';
+                                    rb.onclick = removeBtn.onclick;
+                                    
+                                    w.appendChild(im);
+                                    w.appendChild(rb);
+                                    previewContainer.appendChild(w);
+                                };
+                                r.readAsDataURL(f);
+                            });
+                            updateSubmitButton();
+                        };
+                        
+                        wrapper.appendChild(img);
+                        wrapper.appendChild(removeBtn);
+                        previewContainer.appendChild(wrapper);
+                    };
+                    reader.readAsDataURL(file);
+                });
+                updateSubmitButton();
+            });
+        }
+        
+        // Add book form
+        const addBookForm = document.getElementById('add-book-form');
+        if (addBookForm) {
+            addBookForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                if (selectedFiles.length === 0) return;
+                
+                const userName = document.getElementById('user-name').value;
+                addBookForm.style.display = 'none';
+                const processingDiv = document.getElementById('processing-status');
+                if (processingDiv) {
+                    processingDiv.style.display = 'block';
+                    processingDiv.innerHTML = `
+                        <div class="spinner"></div>
+                        <p>Processing ${selectedFiles.length} book${selectedFiles.length > 1 ? 's' : ''}...</p>
+                        <p id="progress-text">0 of ${selectedFiles.length} complete</p>
+                    `;
+                }
+                
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const formData = new FormData();
+                    formData.append('image', selectedFiles[i]);
+                    formData.append('user_name', userName);
+                    
+                    try {
+                        await fetch('/api/add-book', {
+                            method: 'POST',
+                            body: formData
+                        });
+                    } catch (error) {
+                        console.error(error);
+                    }
+                    const progressText = document.getElementById('progress-text');
+                    if (progressText) {
+                        progressText.textContent = `${i + 1} of ${selectedFiles.length} complete`;
+                    }
+                }
+                window.location.href = '/';
+            });
+        }
+        
+        // Mark read form
+        const markReadForm = document.getElementById('mark-read-form');
+        if (markReadForm) {
+            markReadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const bookId = document.getElementById('read-book-id').value;
+                const readBy = document.getElementById('read-by-name').value;
+                
+                const response = await fetch('/api/mark-read', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ book_id: bookId, read_by: readBy })
+                });
+                if (response.ok) location.reload();
+            });
+        }
+        
+        // Search and filters
+        const searchInput = document.getElementById('search');
+        const filterGenre = document.getElementById('filter-genre');
+        const filterAddedBy = document.getElementById('filter-added-by');
+        const filterReadBy = document.getElementById('filter-read-by');
+        const sortBy = document.getElementById('sort-by');
+        
+        if (searchInput) searchInput.addEventListener('input', filterAndSortBooks);
+        if (filterGenre) filterGenre.addEventListener('change', filterAndSortBooks);
+        if (filterAddedBy) filterAddedBy.addEventListener('change', filterAndSortBooks);
+        if (filterReadBy) filterReadBy.addEventListener('change', filterAndSortBooks);
+        if (sortBy) sortBy.addEventListener('change', filterAndSortBooks);
+        
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                filterAndSortBooks();
+            });
+        });
+        
+        // Modal click outside to close
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+        });
+        
+        // User name
+        function updateUserName() {
+            const savedName = localStorage.getItem('bookTrackerUserName');
+            if (savedName) {
+                const els = [
+                    {el: document.getElementById('current-user-name'), isInput: false},
+                    {el: document.getElementById('user-name'), isInput: true},
+                    {el: document.getElementById('read-by-name'), isInput: true},
+                    {el: document.getElementById('profile-name'), isInput: true}
+                ];
+                els.forEach(item => {
+                    if (item.el) {
+                        if (item.isInput) {
+                            item.el.value = savedName;
+                        } else {
+                            item.el.textContent = savedName;
+                        }
+                    }
+                });
+            }
+        }
+        
+        updateUserName();
+        
+        const profileForm = document.getElementById('profile-form');
+        if (profileForm) {
+            profileForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('profile-name').value.trim();
+                if (name) {
+                    localStorage.setItem('bookTrackerUserName', name);
+                    updateUserName();
+                    closeModal('profile-modal');
+                }
+            });
+        }
     });
 </script>
 </body>
