@@ -1511,9 +1511,10 @@ PAGE_TEMPLATE = """
         }
         
         let selectedFiles = [];
-        
+
         document.getElementById('book-image').addEventListener('change', function(e) {
-            selectedFiles = Array.from(e.target.files);
+            const newFiles = Array.from(e.target.files);
+            selectedFiles = newFiles;
             const previewContainer = document.getElementById('preview-container');
             previewContainer.innerHTML = '';
             
@@ -1522,17 +1523,52 @@ PAGE_TEMPLATE = """
                 reader.onload = function(e) {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'preview-wrapper';
+                    wrapper.dataset.fileIndex = index;
+                    
                     const img = document.createElement('img');
                     img.src = e.target.result;
                     img.className = 'preview-image';
+                    
                     const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';  // FIXED: Prevent form submission
                     removeBtn.className = 'preview-remove';
                     removeBtn.innerHTML = '×';
-                    removeBtn.onclick = function() {
-                        selectedFiles.splice(index, 1);
-                        wrapper.remove();
+                    removeBtn.onclick = function(evt) {
+                        evt.preventDefault();  // FIXED: Prevent default behavior
+                        const idx = parseInt(wrapper.dataset.fileIndex);
+                        
+                        // Remove the file from the array
+                        selectedFiles = selectedFiles.filter((_, i) => i !== idx);
+                        
+                        // Re-render all previews with updated indices
+                        previewContainer.innerHTML = '';
+                        selectedFiles.forEach((f, i) => {
+                            const r = new FileReader();
+                            r.onload = function(ev) {
+                                const w = document.createElement('div');
+                                w.className = 'preview-wrapper';
+                                w.dataset.fileIndex = i;
+                                
+                                const im = document.createElement('img');
+                                im.src = ev.target.result;
+                                im.className = 'preview-image';
+                                
+                                const rb = document.createElement('button');
+                                rb.type = 'button';
+                                rb.className = 'preview-remove';
+                                rb.innerHTML = '×';
+                                rb.onclick = removeBtn.onclick;
+                                
+                                w.appendChild(im);
+                                w.appendChild(rb);
+                                previewContainer.appendChild(w);
+                            };
+                            r.readAsDataURL(f);
+                        });
+                        
                         updateSubmitButton();
                     };
+                    
                     wrapper.appendChild(img);
                     wrapper.appendChild(removeBtn);
                     previewContainer.appendChild(wrapper);
@@ -1540,7 +1576,7 @@ PAGE_TEMPLATE = """
                 reader.readAsDataURL(file);
             });
             updateSubmitButton();
-        });
+        });        
         
         function updateSubmitButton() {
             const btn = document.getElementById('submit-books-btn');
