@@ -706,9 +706,14 @@ PAGE_TEMPLATE = """
             font-size: 0.75em;
             margin-top: auto;
         }
-        
         .books-grid.list .book-actions {
-            display: none;
+            display: flex;
+            gap: 4px;
+        }
+        
+        .books-grid.list .btn {
+            padding: 6px 10px;
+            font-size: 0.75em;
         }
         
         .books-grid.list .read-badge {
