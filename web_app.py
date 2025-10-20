@@ -1,36 +1,4 @@
-function updateSubmitButton() {
-        const btn = document.getElementById('submit-books-btn');
-        if (!btn) return;
-        
-        const count = selectedFiles.length;
-        if (count === 0) {
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-            btn.textContent = 'Add Book(s)';
-        } else {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.textContent = count === 1 ? 'Add 1 Book' : `Add ${count} Books`;
-        }
-    }
-    
-    // FIX #2: Show book details in modal
-    function showBookDetail(bookId) {
-        const bookCard = document.querySelector(`.book-card[data-id="${bookId}"]`);
-        if (!bookCard) return;
-        
-        const title = bookCard.dataset.title;
-        const author = bookCard.dataset.author;
-        const genres = bookCard.dataset.genres;
-        const rating = bookCard.dataset.rating;
-        const addedBy = bookCard.dataset.addedBy;
-        const readBy = bookCard.dataset.readBy;
-        const isRead = bookCard.dataset.read === 'true';
-        
-        // Get additional details from the card
-        const thumbnail = bookCard.querySelector('.book-thumbnail img')?.src || null;
-        const publishDate = bookCard.querySelector('.book-publish-date')?.textContent.replace('📅 Published ', '') || 'Unknown';
-        const summary = book#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Book Tracker Web Interface - Modern UI with Authentication
 Flask web app with camera support, read tracking, and password protection
@@ -1271,8 +1239,7 @@ PAGE_TEMPLATE = """
             background: var(--primary);
             border-color: var(--accent);
         }
-        
-        /* FIX #1: Avatar on cards */
+                /* FIX #1: Avatar on cards */
         .user-avatar-small {
             display: inline-flex;
             align-items: center;
@@ -1443,13 +1410,11 @@ PAGE_TEMPLATE = """
                 font-size: 2em;
                 padding: 8px;
             }
-            
             .book-detail-header {
                 flex-direction: column;
                 align-items: center;
-                text-align: center;
-            }
-            
+                text-align: center; 
+            }                   
             .book-detail-cover {
                 width: 180px;
                 height: 270px;
@@ -1658,14 +1623,6 @@ PAGE_TEMPLATE = """
                             </span>
                             {% endif %}
                         </div>
-                        <div class="book-actions">
-                            {% if book.is_read %}
-                            <button class="btn btn-unread" onclick="markUnread({{ book.id }})">Unread</button>
-                            {% else %}
-                            <button class="btn btn-read" onclick="showReadModal({{ book.id }}, '{{ book.title }}')">Mark Read</button>
-                            {% endif %}
-                            <button class="btn btn-delete" onclick="deleteBook({{ book.id }}, '{{ book.title }}')">Delete</button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1780,9 +1737,8 @@ PAGE_TEMPLATE = """
                 </div>
             </form>
         </div>
-    </div>
-    
-    <!-- FIX #2: Book Detail Modal -->
+     </div>
+        <!-- FIX #2: Book Detail Modal -->
     <div class="modal book-detail-modal" id="book-detail-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1794,7 +1750,6 @@ PAGE_TEMPLATE = """
             </div>
         </div>
     </div>
-    
     <button class="fab" onclick="openModal('add-modal')">+</button>
     
 <script>
@@ -1977,7 +1932,6 @@ PAGE_TEMPLATE = """
             btn.textContent = count === 1 ? 'Add 1 Book' : `Add ${count} Books`;
         }
     }
-    
     // FIX #2: Show book details in modal
     function showBookDetail(bookId) {
         const bookCard = document.querySelector(`.book-card[data-id="${bookId}"]`);
@@ -1990,19 +1944,17 @@ PAGE_TEMPLATE = """
         const addedBy = bookCard.dataset.addedBy;
         const readBy = bookCard.dataset.readBy;
         const isRead = bookCard.dataset.read === 'true';
-        
-        // Get additional details from the card
+    
         const thumbnail = bookCard.querySelector('.book-thumbnail img')?.src || null;
         const publishDate = bookCard.querySelector('.book-publish-date')?.textContent.replace('📅 Published ', '') || 'Unknown';
         const summary = bookCard.querySelector('.book-summary')?.textContent || 'No summary available';
         const awards = bookCard.querySelector('.book-awards')?.textContent.replace('🏆 Awards: ', '') || null;
         const series = bookCard.querySelector('.badge-series')?.textContent || null;
         const goodreadsLink = bookCard.querySelector('.goodreads-link')?.href || null;
-        
-        // Get user avatars
+    
         const addedByAvatar = getUserAvatar(addedBy);
         const readByAvatar = readBy ? getUserAvatar(readBy) : null;
-        
+    
         const content = `
             <div class="book-detail-header">
                 <div class="book-detail-cover">
@@ -2020,7 +1972,7 @@ PAGE_TEMPLATE = """
                     </div>
                 </div>
             </div>
-            
+        
             ${genres && genres !== 'Unknown' ? `
             <div class="book-detail-section">
                 <div class="book-detail-section-title">Genres</div>
@@ -2029,52 +1981,48 @@ PAGE_TEMPLATE = """
                 </div>
             </div>
             ` : ''}
-            
+        
             ${awards ? `
             <div class="book-detail-section">
                 <div class="book-detail-section-title">Awards</div>
                 <div class="book-awards">${awards}</div>
             </div>
             ` : ''}
-            
+        
             <div class="book-detail-section">
                 <div class="book-detail-section-title">Summary</div>
                 <div class="book-detail-section-content">${summary}</div>
             </div>
-            
+        
             ${goodreadsLink ? `
             <div class="book-detail-section">
                 <a href="${goodreadsLink}" target="_blank" class="goodreads-link">View on Goodreads →</a>
             </div>
             ` : ''}
-            
+        
             <div class="book-detail-actions">
                 ${!isRead ? `<button class="btn btn-read" onclick="closeModal('book-detail-modal'); showReadModal(${bookId}, '${title.replace(/'/g, "\\'")}');">Mark as Read</button>` : `<button class="btn btn-unread" onclick="closeModal('book-detail-modal'); markUnread(${bookId});">Mark Unread</button>`}
                 <button class="btn btn-delete" onclick="closeModal('book-detail-modal'); deleteBook(${bookId}, '${title.replace(/'/g, "\\'")}');">Delete Book</button>
             </div>
         `;
-        
+    
         document.getElementById('book-detail-content').innerHTML = content;
         openModal('book-detail-modal');
     }
-    
+
     // FIX #1: Get user avatar emoji from localStorage
     function getUserAvatar(username) {
         if (!username) return '👤';
-        
-        // Try to get from a mapping stored in localStorage
         const avatarMap = JSON.parse(localStorage.getItem('bookTrackerAvatarMap') || '{}');
         return avatarMap[username] || '👤';
     }
-    
-    // Update avatar map when user saves profile
+
     function updateAvatarMap(username, avatar) {
         const avatarMap = JSON.parse(localStorage.getItem('bookTrackerAvatarMap') || '{}');
         avatarMap[username] = avatar;
         localStorage.setItem('bookTrackerAvatarMap', JSON.stringify(avatarMap));
     }
-    
-    // Update all avatar emojis on the page
+
     function updateAllAvatars() {
         document.querySelectorAll('.avatar-emoji').forEach(el => {
             const username = el.dataset.username;
@@ -2082,8 +2030,7 @@ PAGE_TEMPLATE = """
                 el.textContent = getUserAvatar(username);
             }
         });
-    }
-    
+    }    
     // NOW setup event listeners after DOM loads
     document.addEventListener('DOMContentLoaded', function() {
         const booksGrid = document.getElementById('books-grid');
@@ -2261,7 +2208,24 @@ PAGE_TEMPLATE = """
                 filterAndSortBooks();
             });
         });
+        // FIX #2: Make list view cards clickable
+        document.addEventListener('click', function(e) {
+            const card = e.target.closest('.book-card');
+            if (!card) return;
+            
+            const isListView = document.getElementById('books-grid')?.classList.contains('list');
+            if (!isListView) return;
+            
+            if (e.target.closest('.book-actions') || 
+                e.target.closest('.badge-genre') ||
+                e.target.closest('.btn')) return;
+            
+            const bookId = card.dataset.id;
+            showBookDetail(bookId);
+        });
         
+        // FIX #1: Update all avatars on page load
+        updateAllAvatars();
         // Modal click outside to close
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', function(e) {
@@ -2314,7 +2278,6 @@ PAGE_TEMPLATE = """
         }
         
         updateUserProfile();
-        
         const profileForm = document.getElementById('profile-form');
         if (profileForm) {
             profileForm.addEventListener('submit', function(e) {
@@ -2325,11 +2288,13 @@ PAGE_TEMPLATE = """
                 if (name) {
                     localStorage.setItem('bookTrackerUserName', name);
                     localStorage.setItem('bookTrackerUserAvatar', avatar);
+                    updateAvatarMap(name, avatar);  // FIX: Save to avatar map
                     updateUserProfile();
+                    updateAllAvatars();  // FIX: Update all cards
                     closeModal('profile-modal');
                 }
             });
-        }
+        }        
     });
 </script>
 </body>
