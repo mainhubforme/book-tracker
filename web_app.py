@@ -1431,7 +1431,7 @@ PAGE_TEMPLATE = """
     <div class="container">
         <header>
             <div class="header-top">
-                <h1>📚 Book Tracker</h1>
+                <h1>📚 Booky McBookerton</h1>
                 <div class="header-actions">
                     <div class="user-badge" onclick="openModal('profile-modal')" id="current-user-badge">
                         <span id="current-user-avatar">👤</span> <span id="current-user-name">Set Your Name</span>
@@ -1441,7 +1441,7 @@ PAGE_TEMPLATE = """
                     </a>
                 </div>
             </div>
-            <p class="subtitle">Your modern family reading library</p>
+            <p class="subtitle">Your modern family reading list</p>
         </header>
         
         <div class="stats">
