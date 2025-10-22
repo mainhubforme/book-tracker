@@ -1697,8 +1697,14 @@ PAGE_TEMPLATE = """
         });
         
         const savedDensity = localStorage.getItem('bookTrackerDensity') || 'cozy';
-        document.getElementById('books-grid').className = 'books-grid ' + savedDensity;
-        document.querySelector(`.view-density-btn[data-density="${savedDensity}"]`)?.classList.add('active');
+        const booksGrid = document.getElementById('books-grid');
+        if (booksGrid) {
+            booksGrid.className = 'books-grid ' + savedDensity;
+        }
+        const densityBtn = document.querySelector(`.view-density-btn[data-density="${savedDensity}"]`);
+        if (densityBtn) {
+            densityBtn.classList.add('active');
+        }
         
         function toggleSummary(bookId) {
             const summary = document.getElementById('summary-' + bookId);
@@ -1728,15 +1734,18 @@ PAGE_TEMPLATE = """
         
         let selectedFiles = [];
 
-        document.getElementById('book-image').addEventListener('change', function(e) {
-            const newFiles = Array.from(e.target.files);
-            selectedFiles = newFiles;
-            const previewContainer = document.getElementById('preview-container');
-            previewContainer.innerHTML = '';
-            
-            selectedFiles.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
+        // Fix for file input
+        const bookImageInput = document.getElementById('book-image');
+        if (bookImageInput) {
+            bookImageInput.addEventListener('change', function(e) {
+                const newFiles = Array.from(e.target.files);
+                selectedFiles = newFiles;
+                const previewContainer = document.getElementById('preview-container');
+                previewContainer.innerHTML = '';
+                
+                selectedFiles.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'preview-wrapper';
                     wrapper.dataset.fileIndex = index;
@@ -1790,7 +1799,8 @@ PAGE_TEMPLATE = """
                 reader.readAsDataURL(file);
             });
             updateSubmitButton();
-        });        
+        });
+        }
         
         function updateSubmitButton() {
             const btn = document.getElementById('submit-books-btn');
@@ -1806,7 +1816,10 @@ PAGE_TEMPLATE = """
             }
         }
         
-        document.getElementById('add-book-form').addEventListener('submit', async function(e) {
+        // Fix for add book form
+        const addBookForm = document.getElementById('add-book-form');
+        if (addBookForm) {
+            addBookForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             if (selectedFiles.length === 0) return;
             
@@ -1837,6 +1850,7 @@ PAGE_TEMPLATE = """
             }
             window.location.href = '/';
         });
+        }
         
         function showReadModal(bookId, bookTitle) {
             document.getElementById('read-book-id').value = bookId;
@@ -1844,7 +1858,10 @@ PAGE_TEMPLATE = """
             openModal('read-modal');
         }
         
-        document.getElementById('mark-read-form').addEventListener('submit', async function(e) {
+        // Fix for mark read form
+        const markReadForm = document.getElementById('mark-read-form');
+        if (markReadForm) {
+            markReadForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const bookId = document.getElementById('read-book-id').value;
             const readBy = document.getElementById('read-by-name').value;
@@ -1856,6 +1873,7 @@ PAGE_TEMPLATE = """
             });
             if (response.ok) location.reload();
         });
+        }
         
         async function markUnread(bookId) {
             if (!confirm('Mark as unread?')) return;
@@ -1884,15 +1902,17 @@ PAGE_TEMPLATE = """
         const sortBy = document.getElementById('sort-by');
         
         function filterAndSortBooks() {
-            const query = searchInput.value.toLowerCase();
-            const genre = filterGenre.value;
-            const addedBy = filterAddedBy.value;
-            const readBy = filterReadBy.value;
-            const sortOption = sortBy.value;
+            const query = searchInput ? searchInput.value.toLowerCase() : '';
+            const genre = filterGenre ? filterGenre.value : '';
+            const addedBy = filterAddedBy ? filterAddedBy.value : '';
+            const readBy = filterReadBy ? filterReadBy.value : '';
+            const sortOption = sortBy ? sortBy.value : 'date-desc';
             const activeChip = document.querySelector('.chip.active');
             const readFilter = activeChip ? activeChip.dataset.filter : 'all';
             
             const booksGrid = document.getElementById('books-grid');
+            if (!booksGrid) return;
+            
             const books = Array.from(document.querySelectorAll('.book-card'));
             
             const filteredBooks = books.filter(book => {
@@ -1933,11 +1953,11 @@ PAGE_TEMPLATE = """
         }
         
         function clearAllFilters() {
-            searchInput.value = '';
-            filterGenre.selectedIndex = 0;
-            filterAddedBy.selectedIndex = 0;
-            filterReadBy.selectedIndex = 0;
-            sortBy.selectedIndex = 0;
+            if (searchInput) searchInput.value = '';
+            if (filterGenre) filterGenre.selectedIndex = 0;
+            if (filterAddedBy) filterAddedBy.selectedIndex = 0;
+            if (filterReadBy) filterReadBy.selectedIndex = 0;
+            if (sortBy) sortBy.selectedIndex = 0;
             document.querySelectorAll('.chip').forEach(chip => {
                 chip.classList.remove('active');
                 if (chip.dataset.filter === 'all') chip.classList.add('active');
@@ -1945,11 +1965,11 @@ PAGE_TEMPLATE = """
             filterAndSortBooks();
         }
         
-        searchInput.addEventListener('input', filterAndSortBooks);
-        filterGenre.addEventListener('change', filterAndSortBooks);
-        filterAddedBy.addEventListener('change', filterAndSortBooks);
-        filterReadBy.addEventListener('change', filterAndSortBooks);
-        sortBy.addEventListener('change', filterAndSortBooks);
+        if (searchInput) searchInput.addEventListener('input', filterAndSortBooks);
+        if (filterGenre) filterGenre.addEventListener('change', filterAndSortBooks);
+        if (filterAddedBy) filterAddedBy.addEventListener('change', filterAndSortBooks);
+        if (filterReadBy) filterReadBy.addEventListener('change', filterAndSortBooks);
+        if (sortBy) sortBy.addEventListener('change', filterAndSortBooks);
         
         document.querySelectorAll('.chip').forEach(chip => {
             chip.addEventListener('click', function() {
@@ -1977,15 +1997,19 @@ PAGE_TEMPLATE = """
         
         updateUserName();
         
-        document.getElementById('profile-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('profile-name').value.trim();
-            if (name) {
-                localStorage.setItem('bookTrackerUserName', name);
-                updateUserName();
-                closeModal('profile-modal');
-            }
-        });
+        // Fix for profile form
+        const profileForm = document.getElementById('profile-form');
+        if (profileForm) {
+            profileForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('profile-name').value.trim();
+                if (name) {
+                    localStorage.setItem('bookTrackerUserName', name);
+                    updateUserName();
+                    closeModal('profile-modal');
+                }
+            });
+        }
         
         // Initialize thumbs up on page load
         window.addEventListener('DOMContentLoaded', initializeThumbsUp);
