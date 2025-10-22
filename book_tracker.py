@@ -588,7 +588,8 @@ class GoodreadsScraper:
             if desc_section:
                 text_block = desc_section.get_text(separator=" ", strip=True)
                 if text_block and len(text_block) > 40:
-                    summary = re.split(r"(?<=[.!?])\s+", text_block)[0]
+                sentences = re.split(r"(?<=[.!?])\s+", text_block)
+                summary = " ".join(sentences[:3])  # adjust number as needed
             
             if not summary:
                 meta = book_soup.find("meta", {"property": "og:description"})
