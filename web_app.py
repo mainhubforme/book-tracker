@@ -1728,6 +1728,17 @@ PAGE_TEMPLATE = """
         }
         
         function initializeThumbsUp() {
+            // Load latest user avatars from storage
+            userAvatars = JSON.parse(localStorage.getItem('bookTrackerUserAvatars') || '{}');
+            
+            // Make sure current user's avatar is up to date
+            const currentUser = localStorage.getItem('bookTrackerUserName');
+            const currentEmoji = localStorage.getItem('bookTrackerUserEmoji');
+            if (currentUser && currentEmoji) {
+                userAvatars[currentUser] = currentEmoji;
+                localStorage.setItem('bookTrackerUserAvatars', JSON.stringify(userAvatars));
+            }
+            
             document.querySelectorAll('.book-card').forEach(card => {
                 const bookId = card.dataset.id;
                 updateThumbsUpDisplay(bookId);
@@ -2064,27 +2075,51 @@ PAGE_TEMPLATE = """
         function updateUserName() {
             const savedName = localStorage.getItem('bookTrackerUserName');
             const savedEmoji = localStorage.getItem('bookTrackerUserEmoji') || '👤';
-            if (savedName) {
-                document.getElementById('current-user-name').textContent = savedName;
-                document.getElementById('user-name').value = savedName;
-                document.getElementById('read-by-name').value = savedName;
-                document.getElementById('profile-name').value = savedName;
-                
-                // Update header emoji
-                const headerEmoji = document.getElementById('current-user-emoji');
-                if (headerEmoji) {
-                    headerEmoji.textContent = savedEmoji;
-                }
-                
-                // Set avatar emoji
-                if (!userAvatars[savedName]) {
-                    userAvatars[savedName] = savedEmoji;
-                }
+            
+            // Always update header emoji first
+            const headerEmoji = document.getElementById('current-user-emoji');
+            if (headerEmoji) {
+                headerEmoji.textContent = savedEmoji;
             }
             
-            // Update emoji selection
-            const currentEmoji = localStorage.getItem('bookTrackerUserEmoji') || '👤';
-            document.getElementById('profile-emoji').value = currentEmoji;
+            if (savedName) {
+                const nameElement = document.getElementById('current-user-name');
+                if (nameElement) {
+                    nameElement.textContent = savedName;
+                }
+                
+                const userNameInput = document.getElementById('user-name');
+                if (userNameInput) {
+                    userNameInput.value = savedName;
+                }
+                
+                const readByInput = document.getElementById('read-by-name');
+                if (readByInput) {
+                    readByInput.value = savedName;
+                }
+                
+                const profileNameInput = document.getElementById('profile-name');
+                if (profileNameInput) {
+                    profileNameInput.value = savedName;
+                }
+                
+                // Set avatar emoji in global storage
+                if (!userAvatars[savedName]) {
+                    userAvatars[savedName] = savedEmoji;
+                } else {
+                    // Update if it changed
+                    userAvatars[savedName] = savedEmoji;
+                }
+                localStorage.setItem('bookTrackerUserAvatars', JSON.stringify(userAvatars));
+            }
+            
+            // Update emoji selection in profile modal
+            const currentEmoji = savedEmoji;
+            const profileEmojiInput = document.getElementById('profile-emoji');
+            if (profileEmojiInput) {
+                profileEmojiInput.value = currentEmoji;
+            }
+            
             document.querySelectorAll('.emoji-option').forEach(opt => {
                 if (opt.dataset.emoji === currentEmoji) {
                     opt.classList.add('selected');
@@ -2111,11 +2146,26 @@ PAGE_TEMPLATE = """
             option.addEventListener('click', function() {
                 document.querySelectorAll('.emoji-option').forEach(opt => opt.classList.remove('selected'));
                 this.classList.add('selected');
-                document.getElementById('profile-emoji').value = this.dataset.emoji;
+                const selectedEmoji = this.dataset.emoji;
+                document.getElementById('profile-emoji').value = selectedEmoji;
+                
+                // Immediately update header preview
+                const headerEmoji = document.getElementById('current-user-emoji');
+                if (headerEmoji) {
+                    headerEmoji.textContent = selectedEmoji;
+                }
             });
         });
         
+        // Initialize on page load
         updateUserName();
+        
+        // Re-initialize when page becomes visible (handles browser back/forward)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                updateUserName();
+            }
+        });
         
         // Fix for profile form
         const profileForm = document.getElementById('profile-form');
