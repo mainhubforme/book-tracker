@@ -1,583 +1,4 @@
-<script>
-        // Thumbs up storage
-        let thumbsUpData = JSON.parse(localStorage.getItem('bookThumbsUp') || '{}');
-        
-        function getAvatarColor(name) {
-            if (!name) return '#6366f1';
-            const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
-            let hash = 0;
-            for (let i = 0; i < name.length; i++) {
-                hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            return colors[Math.abs(hash) % colors.length];
-        }
-        
-        function getCurrentUserName() {
-            return localStorage.getItem('bookTrackerUserName') || 'Guest';
-        }
-        
-        function toggleThumbsUp(bookId) {
-            const userName = getCurrentUserName();
-            const key = `book_${bookId}`;
-            
-            if (!thumbsUpData[key]) {
-                thumbsUpData[key] = [];
-            }
-            
-            const userIndex = thumbsUpData[key].indexOf(userName);
-            if (userIndex > -1) {
-                thumbsUpData[key].splice(userIndex, 1);
-            } else {
-                thumbsUpData[key].push(userName);
-            }
-            
-            localStorage.setItem('bookThumbsUp', JSON.stringify(thumbsUpData));
-            updateThumbsUpDisplay(bookId);
-        }
-        
-        function updateThumbsUpDisplay(bookId) {
-            const key = `book_${bookId}`;
-            const users = thumbsUpData[key] || [];
-            const userName = getCurrentUserName();
-            
-            const btn = document.getElementById(`thumbs-${bookId}`);
-            const count = document.getElementById(`thumbs-count-${bookId}`);
-            const avatars = document.getElementById(`thumbs-avatars-${bookId}`);
-            
-            if (!btn || !count || !avatars) return;
-            
-            count.textContent = users.length;
-            
-            if (users.includes(userName)) {
-                btn.classList.add('liked');
-            } else {
-                btn.classList.remove('liked');
-            }
-            
-            avatars.innerHTML = '';
-            users.forEach(user => {
-                const avatar = document.createElement('div');
-                avatar.className = 'avatar-circle';
-                avatar.style.backgroundColor = getAvatarColor(user);
-                avatar.textContent = user[0].toUpperCase();
-                avatar.title = user;
-                avatars.appendChild(avatar);
-            });
-        }
-        
-        function initializeThumbsUp() {
-            document.querySelectorAll('.book-card').forEach(card => {
-                const bookId = card.dataset.id;
-                updateThumbsUpDisplay(bookId);
-            });
-        }
-        
-        function openBookDetail(bookId) {
-            // For now, just prevent propagation - could expand to show detail modal
-            console.log('Opening book detail:', bookId);
-        }
-        
-        // Toggle genres
-        function toggleGenres(bookId) {
-            const container = document.getElementById('genres-' + bookId);
-            const btn = event.target;
-            
-            if (container.classList.contains('collapsed')) {
-                container.classList.remove('collapsed');
-                btn.textContent = 'Show less';
-            } else {
-                container.classList.add('collapsed');
-                const hiddenCount = container.querySelectorAll('.badge-genre').length - 3;
-                btn.textContent = `+${hiddenCount} more`;
-            }
-        }
-        
-        function filterByGenre(genre) {
-            const genreSelect = document.getElementById('filter-genre');
-            genreSelect.value = genre;
-            filterAndSortBooks();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        
-        document.querySelectorAll('.view-density-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.view-density-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                const density = this.dataset.density;
-                const grid = document.getElementById('books-grid');
-                grid.className = 'books-grid ' + density;
-                localStorage.setItem('bookTrackerDensity', density);
-            });
-        });
-        
-        const savedDensity = localStorage.getItem('bookTrackerDensity') || 'cozy';
-        document.getElementById('books-grid').className = 'books-grid ' + savedDensity;
-        document.querySelector(`.view-density-btn[data-density="${savedDensity}"]`)?.classList.add('active');
-        
-        function toggleSummary(bookId) {
-            const summary = document.getElementById('summary-' + bookId);
-            const readMore = event.target;
-            if (summary.classList.contains('collapsed')) {
-                summary.classList.remove('collapsed');
-                readMore.textContent = 'Read less';
-            } else {
-                summary.classList.add('collapsed');
-                readMore.textContent = 'Read more';
-            }
-        }
-        
-        function openModal(modalId) {
-            document.getElementById(modalId).classList.add('active');
-        }
-        
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-            if (modalId === 'add-modal') {
-                document.getElementById('add-book-form').reset();
-                document.getElementById('preview-container').innerHTML = '';
-                selectedFiles = [];
-                updateSubmitButton();
-            }
-        }
-        
-        let selectedFiles = [];
-
-        document.getElementById('book-image').addEventListener('change', function(e) {
-            const newFiles = Array.from(e.target.files);
-            selectedFiles = newFiles;
-            const previewContainer = document.getElementById('preview-container');
-            previewContainer.innerHTML = '';
-            
-            selectedFiles.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'preview-wrapper';
-                    wrapper.dataset.fileIndex = index;
-                    
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.className = 'preview-image';
-                    
-                    const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.className = 'preview-remove';
-                    removeBtn.innerHTML = '×';
-                    removeBtn.onclick = function(evt) {
-                        evt.preventDefault();
-                        const idx = parseInt(wrapper.dataset.fileIndex);
-                        
-                        selectedFiles = selectedFiles.filter((_, i) => i !== idx);
-                        
-                        previewContainer.innerHTML = '';
-                        selectedFiles.forEach((f, i) => {
-                            const r = new FileReader();
-                            r.onload = function(ev) {
-                                const w = document.createElement('div');
-                                w.className = 'preview-wrapper';
-                                w.dataset.fileIndex = i;
-                                
-                                const im = document.createElement('img');
-                                im.src = ev.target.result;
-                                im.className = 'preview-image';
-                                
-                                const rb = document.createElement('button');
-                                rb.type = 'button';
-                                rb.className = 'preview-remove';
-                                rb.innerHTML = '×';
-                                rb.onclick = removeBtn.onclick;
-                                
-                                w.appendChild(im);
-                                w.appendChild(rb);
-                                previewContainer.appendChild(w);
-                            };
-                            r.readAsDataURL(f);
-                        });
-                        
-                        updateSubmitButton();
-                    };
-                    
-                    wrapper.appendChild(img);
-                    wrapper.appendChild(removeBtn);
-                    previewContainer.appendChild(wrapper);
-                };
-                reader.readAsDataURL(file);
-            });
-            updateSubmitButton();
-        });        
-        
-        function updateSubmitButton() {
-            const btn = document.getElementById('submit-books-btn');
-            const count = selectedFiles.length;
-            if (count === 0) {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-                btn.textContent = 'Add Book(s)';
-            } else {
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.textContent = count === 1 ? 'Add 1 Book' : `Add ${count} Books`;
-            }
-        }
-        
-        document.getElementById('add-book-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            if (selectedFiles.length === 0) return;
-            
-            const userName = document.getElementById('user-name').value;
-            document.getElementById('add-book-form').style.display = 'none';
-            const processingDiv = document.getElementById('processing-status');
-            processingDiv.style.display = 'block';
-            processingDiv.innerHTML = `
-                <div class="spinner"></div>
-                <p>Processing ${selectedFiles.length} book${selectedFiles.length > 1 ? 's' : ''}...</p>
-                <p id="progress-text">0 of ${selectedFiles.length} complete</p>
-            `;
-            
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const formData = new FormData();
-                formData.append('image', selectedFiles[i]);
-                formData.append('user_name', userName);
-                
-                try {
-                    await fetch('/api/add-book', {
-                        method: 'POST',
-                        body: formData
-                    });
-                } catch (error) {
-                    console.error(error);
-                }
-                document.getElementById('progress-text').textContent = `${i + 1} of ${selectedFiles.length} complete`;
-            }
-            window.location.href = '/';
-        });
-        
-        function showReadModal(bookId, bookTitle) {
-            document.getElementById('read-book-id').value = bookId;
-            document.getElementById('read-book-title').textContent = bookTitle;
-            openModal('read-modal');
-        }
-        
-        document.getElementById('mark-read-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const bookId = document.getElementById('read-book-id').value;
-            const readBy = document.getElementById('read-by-name').value;
-            
-            const response = await fetch('/api/mark-read', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ book_id: bookId, read_by: readBy })
-            });
-            if (response.ok) location.reload();
-        });
-        
-        async function markUnread(bookId) {
-            if (!confirm('Mark as unread?')) return;
-            const response = await fetch('/api/mark-unread', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ book_id: bookId })
-            });
-            if (response.ok) location.reload();
-        }
-        
-        async function deleteBook(bookId, bookTitle) {
-            if (!confirm(`Delete "${bookTitle}"?`)) return;
-            const response = await fetch('/api/delete-book', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ book_id: bookId })
-            });
-            if (response.ok) location.reload();
-        }
-        
-        const searchInput = document.getElementById('search');
-        const filterGenre = document.getElementById('filter-genre');
-        const filterAddedBy = document.getElementById('filter-added-by');
-        const filterReadBy = document.getElementById('filter-read-by');
-        const sortBy = document.getElementById('sort-by');
-        
-        function filterAndSortBooks() {
-            const query = searchInput.value.toLowerCase();
-            const genre = filterGenre.value;
-            const addedBy = filterAddedBy.value;
-            const readBy = filterReadBy.value;
-            const sortOption = sortBy.value;
-            const activeChip = document.querySelector('.chip.active');
-            const readFilter = activeChip ? activeChip.dataset.filter : 'all';
-            
-            const booksGrid = document.getElementById('books-grid');
-            const books = Array.from(document.querySelectorAll('.book-card'));
-            
-            const filteredBooks = books.filter(book => {
-                const text = book.textContent.toLowerCase();
-                const bookGenres = book.dataset.genres.toLowerCase();
-                const bookAddedBy = book.dataset.addedBy;
-                const bookReadBy = book.dataset.readBy;
-                const isRead = book.dataset.read === 'true';
-                
-                if (query && !text.includes(query)) return false;
-                if (genre && !bookGenres.includes(genre.toLowerCase())) return false;
-                if (addedBy && bookAddedBy !== addedBy) return false;
-                if (readBy && bookReadBy !== readBy) return false;
-                if (readFilter === 'read' && !isRead) return false;
-                if (readFilter === 'unread' && isRead) return false;
-                
-                return true;
-            });
-            
-            filteredBooks.sort((a, b) => {
-                switch(sortOption) {
-                    case 'date-desc': return new Date(b.dataset.date) - new Date(a.dataset.date);
-                    case 'date-asc': return new Date(a.dataset.date) - new Date(b.dataset.date);
-                    case 'title-asc': return a.dataset.title.localeCompare(b.dataset.title);
-                    case 'title-desc': return b.dataset.title.localeCompare(a.dataset.title);
-                    case 'author-asc': return a.dataset.author.localeCompare(b.dataset.author);
-                    case 'rating-desc': return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
-                    case 'rating-asc': return parseFloat(a.dataset.rating) - parseFloat(b.dataset.rating);
-                    default: return 0;
-                }
-            });
-            
-            books.forEach(book => book.style.display = 'none');
-            filteredBooks.forEach(book => {
-                book.style.display = 'block';
-                booksGrid.appendChild(book);
-            });
-        }
-        
-        function clearAllFilters() {
-            searchInput.value = '';
-            filterGenre.selectedIndex = 0;
-            filterAddedBy.selectedIndex = 0;
-            filterReadBy.selectedIndex = 0;
-            sortBy.selectedIndex = 0;
-            document.querySelectorAll('.chip').forEach(chip => {
-                chip.classList.remove('active');
-                if (chip.dataset.filter === 'all') chip.classList.add('active');
-            });
-            filterAndSortBooks();
-        }
-        
-        searchInput.addEventListener('input', filterAndSortBooks);
-        filterGenre.addEventListener('change', filterAndSortBooks);
-        filterAddedBy.addEventListener('change', filterAndSortBooks);
-        filterReadBy.addEventListener('change', filterAndSortBooks);
-        sortBy.addEventListener('change', filterAndSortBooks);
-        
-        document.querySelectorAll('.chip').forEach(chip => {
-            chip.addEventListener('click', function() {
-                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-                filterAndSortBooks();
-            });
-        });
-        
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', function(e) {
-                if (e.target === this) this.classList.remove('active');
-            });
-        });
-        
-        function updateUserName() {
-            const savedName = localStorage.getItem('bookTrackerUserName');
-            if (savedName) {
-                document.getElementById('current-user-name').textContent = savedName;
-                document.getElementById('user-name').value = savedName;
-                document.getElementById('read-by-name').value = savedName;
-                document.getElementById('profile-name').value = savedName;
-            }
-        }
-        
-        updateUserName();
-        
-        document.getElementById('profile-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('profile-name').value.trim();
-            if (name) {
-                localStorage.setItem('bookTrackerUserName', name);
-                updateUserName();
-                closeModal('profile-modal');
-            }
-        });
-        
-        // Initialize thumbs up on page load
-        window.addEventListener('DOMContentLoaded', initializeThumbsUp);
-    </script>
-</body>
-</html>
-"""
-
-# ============================================================================
-# ROUTES
-# ============================================================================
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    """Login page."""
-    if request.method == 'POST':
-        password = request.form.get('password')
-        if password == FAMILY_PASSWORD:
-            session['logged_in'] = True
-            session.permanent = True
-            return redirect(url_for('index'))
-        else:
-            return render_template_string(LOGIN_TEMPLATE, error='Incorrect password. Try again!')
-    
-    return render_template_string(LOGIN_TEMPLATE)
-
-@app.route('/logout')
-def logout():
-    """Logout route."""
-    session.clear()
-    return redirect(url_for('login'))
-
-@app.route('/')
-@login_required
-def index():
-    """Home page showing all books."""
-    books = db.get_all_books()
-    stats = db.get_stats()
-    
-    for book in books:
-        book.thumbnail = get_book_thumbnail(book.image_path)
-        book.formatted_date = format_publish_date(book.date_published)
-    
-    all_genres = get_all_genres(books)
-    
-    return render_template_string(PAGE_TEMPLATE, books=books, stats=stats, all_genres=all_genres)
-
-@app.route('/api/books')
-@login_required
-def api_books():
-    """API endpoint to get all books as JSON."""
-    books = db.get_all_books()
-    return jsonify([book.to_dict() for book in books])
-
-@app.route('/api/stats')
-@login_required
-def api_stats():
-    """API endpoint to get library statistics."""
-    return jsonify(db.get_stats())
-
-@app.route('/api/search')
-@login_required
-def api_search():
-    """API endpoint to search books."""
-    query = request.args.get('q', '')
-    if not query:
-        return jsonify([])
-    
-    books = db.search_books(query)
-    return jsonify([book.to_dict() for book in books])
-
-@app.route('/api/add-book', methods=['POST'])
-@login_required
-def api_add_book():
-    """API endpoint to add a new book from uploaded image."""
-    try:
-        if 'image' not in request.files:
-            return jsonify({'success': False, 'error': 'No image provided'})
-        
-        file = request.files['image']
-        user_name = request.form.get('user_name', 'Unknown')
-        
-        if file.filename == '':
-            return jsonify({'success': False, 'error': 'No file selected'})
-        
-        temp_dir = tempfile.mkdtemp()
-        temp_path = Path(temp_dir) / file.filename
-        file.save(str(temp_path))
-        
-        processor = ImageProcessor()
-        book_info = processor.extract_book_info(str(temp_path))
-        
-        if not book_info:
-            return jsonify({'success': False, 'error': 'Failed to extract book information'})
-        
-        enricher = BookEnricher()
-        enriched_data = enricher.enrich_book_data(book_info, use_goodreads=True)
-        enriched_data['added_by'] = user_name
-        
-        book = db.add_book(enriched_data)
-        
-        return jsonify({'success': True, 'book_id': book.id})
-        
-    except Exception as e:
-        print(f"Error adding book: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/mark-read', methods=['POST'])
-@login_required
-def api_mark_read():
-    """API endpoint to mark a book as read."""
-    try:
-        data = request.get_json()
-        book_id = data.get('book_id')
-        read_by = data.get('read_by', 'Unknown')
-        
-        book = db.mark_as_read(int(book_id), read_by)
-        
-        if book:
-            return jsonify({'success': True})
-        else:
-            return jsonify({'success': False, 'error': 'Book not found'})
-            
-    except Exception as e:
-        print(f"Error marking as read: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/mark-unread', methods=['POST'])
-@login_required
-def api_mark_unread():
-    """API endpoint to mark a book as unread."""
-    try:
-        data = request.get_json()
-        book_id = data.get('book_id')
-        
-        book = db.mark_as_unread(int(book_id))
-        
-        if book:
-            return jsonify({'success': True})
-        else:
-            return jsonify({'success': False, 'error': 'Book not found'})
-            
-    except Exception as e:
-        print(f"Error marking as unread: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/delete-book', methods=['POST'])
-@login_required
-def api_delete_book():
-    """API endpoint to delete a book."""
-    try:
-        data = request.get_json()
-        book_id = data.get('book_id')
-        
-        success = db.delete_book(int(book_id))
-        
-        if success:
-            return jsonify({'success': True})
-        else:
-            return jsonify({'success': False, 'error': 'Book not found'})
-            
-    except Exception as e:
-        print(f"Error deleting book: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-
-# ============================================================================
-# MAIN
-# ============================================================================
-
-if __name__ == '__main__':
-    print("🚀 Starting Book Tracker Web Interface...")
-    print("📚 Booky McBookerton!")
-    print("🔒 Password:", FAMILY_PASSWORD)
-    print("🌐 Access at: http://localhost:5001")
-    print("\nPress Ctrl+C to stop")
-    
-    port = int(os.environ.get('PORT', 5001))
-    app.run(debug=False, host='0.0.0.0', port=port)#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Book Tracker Web Interface - Modern UI with Authentication
 Flask web app with camera support, read tracking, and password protection
@@ -1967,3 +1388,779 @@ PAGE_TEMPLATE = """
                 <div class="chip" data-filter="read">Read</div>
             </div>
         </div>
+        
+        {% if books %}
+        <div class="books-grid cozy" id="books-grid">
+            {% for book in books %}
+            <div class="book-card {% if book.is_read %}read{% endif %}" 
+                 data-id="{{ book.id }}"
+                 data-title="{{ book.title }}"
+                 data-author="{{ book.author }}"
+                 data-added-by="{{ book.added_by or '' }}" 
+                 data-read-by="{{ book.read_by or '' }}"
+                 data-read="{{ 'true' if book.is_read else 'false' }}"
+                 data-genres="{{ book.genres or book.genre or '' }}"
+                 data-rating="{{ book.goodreads_score or 0 }}"
+                 data-date="{{ book.date_entered }}"
+                 onclick="openBookDetail({{ book.id }})">
+                <div class="book-thumbnail">
+                    {% if book.thumbnail %}
+                    <img src="{{ book.thumbnail }}" alt="{{ book.title }}">
+                    {% else %}
+                    📚
+                    {% endif %}
+                    {% if book.is_read %}
+                    <div class="read-badge">✓ Read</div>
+                    {% endif %}
+                </div>
+                <div class="book-content">
+                    <div class="book-title">{{ book.title }}</div>
+                    <div class="book-author">by {{ book.author }}</div>
+                    {% if book.formatted_date %}
+                    <div class="book-publish-date">📅 Published {{ book.formatted_date }}</div>
+                    {% elif book.date_published and book.date_published != 'Unknown' %}
+                    <div class="book-publish-date">📅 Published {{ book.date_published }}</div>
+                    {% endif %}
+                    
+                    <div class="book-meta">
+                        <div class="genres-container collapsed" id="genres-{{ book.id }}">
+                            {% if book.genres and book.genres != 'Unknown' %}
+                                {% for genre in book.genres.split(', ') %}
+                                <span class="badge badge-genre" onclick="event.stopPropagation(); filterByGenre('{{ genre }}')" title="Click to filter">{{ genre }}</span>
+                                {% endfor %}
+                            {% elif book.genre and book.genre != 'Unknown' %}
+                            <span class="badge badge-genre" onclick="event.stopPropagation(); filterByGenre('{{ book.genre }}')" title="Click to filter">{{ book.genre }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if book.genres and book.genres.split(', ')|length > 3 %}
+                        <button class="expand-genres-btn" onclick="event.stopPropagation(); toggleGenres({{ book.id }})">
+                            +{{ book.genres.split(', ')|length - 3 }} more
+                        </button>
+                        {% endif %}
+                        
+                        {% if book.part_of_series and book.part_of_series not in ['No', 'Unknown'] %}
+                        <span class="badge badge-series">
+                            {{ book.part_of_series }}{% if book.series_number %} #{{ book.series_number }}{% endif %}
+                        </span>
+                        {% endif %}
+                        
+                        {% if book.goodreads_score %}
+                        <a href="{{ book.goodreads_url }}" target="_blank" class="badge badge-rating goodreads-link" style="text-decoration: none;" onclick="event.stopPropagation()">
+                            ⭐ {{ book.goodreads_score }}/5
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                    {% if book.major_awards and book.major_awards not in ['TBD', 'Unknown', 'None', 'none', 'N/A'] %}
+                    <div class="book-awards">
+                        <strong>🏆 Awards:</strong> {{ book.major_awards }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if book.summary and book.summary != 'Unknown' and book.summary != 'No summary available' %}
+                    <div class="book-summary collapsed" id="summary-{{ book.id }}">{{ book.summary }}</div>
+                    <span class="read-more" onclick="event.stopPropagation(); toggleSummary({{ book.id }})">Read more</span>
+                    {% endif %}
+                    
+                    <div class="book-footer">
+                        <div class="book-footer-left">
+                            <div class="avatar-info">
+                                {% set user_color = '#6366f1' %}
+                                {% if book.added_by %}
+                                    {% set colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'] %}
+                                    {% set hash_val = book.added_by|length % 8 %}
+                                    {% set user_color = colors[hash_val] %}
+                                {% endif %}
+                                <div class="avatar-circle" style="background-color: {{ user_color }};">
+                                    {{ book.added_by[0].upper() if book.added_by else '?' }}
+                                </div>
+                                <span class="avatar-label">{{ book.added_by or 'Unknown' }}</span>
+                            </div>
+                            {% if book.date_entered %}
+                            <div class="date-added">Added {{ book.date_entered.strftime('%b %d, %Y') }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="book-actions">
+                            {% if book.is_read %}
+                            <button class="btn btn-unread" onclick="event.stopPropagation(); markUnread({{ book.id }})">Unread</button>
+                            {% else %}
+                            <button class="btn btn-read" onclick="event.stopPropagation(); showReadModal({{ book.id }}, '{{ book.title }}')">Read</button>
+                            {% endif %}
+                            <button class="btn btn-delete" onclick="event.stopPropagation(); deleteBook({{ book.id }}, '{{ book.title }}')">Delete</button>
+                        </div>
+                    </div>
+                    
+                    <div class="thumbs-up-section">
+                        <button class="thumbs-up-btn" id="thumbs-{{ book.id }}" onclick="event.stopPropagation(); toggleThumbsUp({{ book.id }})">
+                            👍 <span id="thumbs-count-{{ book.id }}">0</span>
+                        </button>
+                        <div class="thumbs-up-avatars" id="thumbs-avatars-{{ book.id }}"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h2>📖 No books yet!</h2>
+            <p>Tap the + button to add your first book</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Add Book Modal -->
+    <div class="modal" id="add-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Book</h2>
+                <button class="close-btn" onclick="closeModal('add-modal')">&times;</button>
+            </div>
+            <form id="add-book-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" id="user-name" name="user_name" placeholder="Enter your name" required>
+                </div>
+                <div class="form-group">
+                    <label>Book Cover Photo</label>
+                    <input type="file" id="book-image" name="image" accept="image/*" capture="environment" class="camera-input" multiple required>
+                    <button type="button" class="camera-btn" onclick="document.getElementById('book-image').click()">
+                        📷 Take Photo or Upload
+                    </button>
+                    <div id="preview-container" style="margin-top: 15px;"></div>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn camera-btn" id="submit-books-btn" disabled style="opacity: 0.5;">Add Book(s)</button>
+                </div>
+            </form>
+            <div id="processing-status" class="processing" style="display: none;">
+                <div class="spinner"></div>
+                <p>Processing...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mark Read Modal -->
+    <div class="modal" id="read-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Mark as Read</h2>
+                <button class="close-btn" onclick="closeModal('read-modal')">&times;</button>
+            </div>
+            <form id="mark-read-form">
+                <input type="hidden" id="read-book-id">
+                <div class="form-group">
+                    <label>Book: <span id="read-book-title"></span></label>
+                </div>
+                <div class="form-group">
+                    <label>Who read this book?</label>
+                    <input type="text" id="read-by-name" name="read_by" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn camera-btn">Mark as Read</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Profile Modal -->
+    <div class="modal" id="profile-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Your Profile</h2>
+                <button class="close-btn" onclick="closeModal('profile-modal')">&times;</button>
+            </div>
+            <form id="profile-form">
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" id="profile-name" placeholder="Enter your name" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn camera-btn">Save Name</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <button class="fab" onclick="openModal('add-modal')">+</button>
+    
+    <script>
+        // Thumbs up storage
+        let thumbsUpData = JSON.parse(localStorage.getItem('bookThumbsUp') || '{}');
+        
+        function getAvatarColor(name) {
+            if (!name) return '#6366f1';
+            const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+        
+        function getCurrentUserName() {
+            return localStorage.getItem('bookTrackerUserName') || 'Guest';
+        }
+        
+        function toggleThumbsUp(bookId) {
+            const userName = getCurrentUserName();
+            const key = `book_${bookId}`;
+            
+            if (!thumbsUpData[key]) {
+                thumbsUpData[key] = [];
+            }
+            
+            const userIndex = thumbsUpData[key].indexOf(userName);
+            if (userIndex > -1) {
+                thumbsUpData[key].splice(userIndex, 1);
+            } else {
+                thumbsUpData[key].push(userName);
+            }
+            
+            localStorage.setItem('bookThumbsUp', JSON.stringify(thumbsUpData));
+            updateThumbsUpDisplay(bookId);
+        }
+        
+        function updateThumbsUpDisplay(bookId) {
+            const key = `book_${bookId}`;
+            const users = thumbsUpData[key] || [];
+            const userName = getCurrentUserName();
+            
+            const btn = document.getElementById(`thumbs-${bookId}`);
+            const count = document.getElementById(`thumbs-count-${bookId}`);
+            const avatars = document.getElementById(`thumbs-avatars-${bookId}`);
+            
+            if (!btn || !count || !avatars) return;
+            
+            count.textContent = users.length;
+            
+            if (users.includes(userName)) {
+                btn.classList.add('liked');
+            } else {
+                btn.classList.remove('liked');
+            }
+            
+            avatars.innerHTML = '';
+            users.forEach(user => {
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar-circle';
+                avatar.style.backgroundColor = getAvatarColor(user);
+                avatar.textContent = user[0].toUpperCase();
+                avatar.title = user;
+                avatars.appendChild(avatar);
+            });
+        }
+        
+        function initializeThumbsUp() {
+            document.querySelectorAll('.book-card').forEach(card => {
+                const bookId = card.dataset.id;
+                updateThumbsUpDisplay(bookId);
+            });
+        }
+        
+        function openBookDetail(bookId) {
+            // For now, just prevent propagation - could expand to show detail modal
+            console.log('Opening book detail:', bookId);
+        }
+        
+        // Toggle genres
+        function toggleGenres(bookId) {
+            const container = document.getElementById('genres-' + bookId);
+            const btn = event.target;
+            
+            if (container.classList.contains('collapsed')) {
+                container.classList.remove('collapsed');
+                btn.textContent = 'Show less';
+            } else {
+                container.classList.add('collapsed');
+                const hiddenCount = container.querySelectorAll('.badge-genre').length - 3;
+                btn.textContent = `+${hiddenCount} more`;
+            }
+        }
+        
+        function filterByGenre(genre) {
+            const genreSelect = document.getElementById('filter-genre');
+            genreSelect.value = genre;
+            filterAndSortBooks();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        document.querySelectorAll('.view-density-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.view-density-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const density = this.dataset.density;
+                const grid = document.getElementById('books-grid');
+                grid.className = 'books-grid ' + density;
+                localStorage.setItem('bookTrackerDensity', density);
+            });
+        });
+        
+        const savedDensity = localStorage.getItem('bookTrackerDensity') || 'cozy';
+        document.getElementById('books-grid').className = 'books-grid ' + savedDensity;
+        document.querySelector(`.view-density-btn[data-density="${savedDensity}"]`)?.classList.add('active');
+        
+        function toggleSummary(bookId) {
+            const summary = document.getElementById('summary-' + bookId);
+            const readMore = event.target;
+            if (summary.classList.contains('collapsed')) {
+                summary.classList.remove('collapsed');
+                readMore.textContent = 'Read less';
+            } else {
+                summary.classList.add('collapsed');
+                readMore.textContent = 'Read more';
+            }
+        }
+        
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            if (modalId === 'add-modal') {
+                document.getElementById('add-book-form').reset();
+                document.getElementById('preview-container').innerHTML = '';
+                selectedFiles = [];
+                updateSubmitButton();
+            }
+        }
+        
+        let selectedFiles = [];
+
+        document.getElementById('book-image').addEventListener('change', function(e) {
+            const newFiles = Array.from(e.target.files);
+            selectedFiles = newFiles;
+            const previewContainer = document.getElementById('preview-container');
+            previewContainer.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'preview-wrapper';
+                    wrapper.dataset.fileIndex = index;
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'preview-image';
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'preview-remove';
+                    removeBtn.innerHTML = '×';
+                    removeBtn.onclick = function(evt) {
+                        evt.preventDefault();
+                        const idx = parseInt(wrapper.dataset.fileIndex);
+                        
+                        selectedFiles = selectedFiles.filter((_, i) => i !== idx);
+                        
+                        previewContainer.innerHTML = '';
+                        selectedFiles.forEach((f, i) => {
+                            const r = new FileReader();
+                            r.onload = function(ev) {
+                                const w = document.createElement('div');
+                                w.className = 'preview-wrapper';
+                                w.dataset.fileIndex = i;
+                                
+                                const im = document.createElement('img');
+                                im.src = ev.target.result;
+                                im.className = 'preview-image';
+                                
+                                const rb = document.createElement('button');
+                                rb.type = 'button';
+                                rb.className = 'preview-remove';
+                                rb.innerHTML = '×';
+                                rb.onclick = removeBtn.onclick;
+                                
+                                w.appendChild(im);
+                                w.appendChild(rb);
+                                previewContainer.appendChild(w);
+                            };
+                            r.readAsDataURL(f);
+                        });
+                        
+                        updateSubmitButton();
+                    };
+                    
+                    wrapper.appendChild(img);
+                    wrapper.appendChild(removeBtn);
+                    previewContainer.appendChild(wrapper);
+                };
+                reader.readAsDataURL(file);
+            });
+            updateSubmitButton();
+        });        
+        
+        function updateSubmitButton() {
+            const btn = document.getElementById('submit-books-btn');
+            const count = selectedFiles.length;
+            if (count === 0) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.textContent = 'Add Book(s)';
+            } else {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.textContent = count === 1 ? 'Add 1 Book' : `Add ${count} Books`;
+            }
+        }
+        
+        document.getElementById('add-book-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (selectedFiles.length === 0) return;
+            
+            const userName = document.getElementById('user-name').value;
+            document.getElementById('add-book-form').style.display = 'none';
+            const processingDiv = document.getElementById('processing-status');
+            processingDiv.style.display = 'block';
+            processingDiv.innerHTML = `
+                <div class="spinner"></div>
+                <p>Processing ${selectedFiles.length} book${selectedFiles.length > 1 ? 's' : ''}...</p>
+                <p id="progress-text">0 of ${selectedFiles.length} complete</p>
+            `;
+            
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const formData = new FormData();
+                formData.append('image', selectedFiles[i]);
+                formData.append('user_name', userName);
+                
+                try {
+                    await fetch('/api/add-book', {
+                        method: 'POST',
+                        body: formData
+                    });
+                } catch (error) {
+                    console.error(error);
+                }
+                document.getElementById('progress-text').textContent = `${i + 1} of ${selectedFiles.length} complete`;
+            }
+            window.location.href = '/';
+        });
+        
+        function showReadModal(bookId, bookTitle) {
+            document.getElementById('read-book-id').value = bookId;
+            document.getElementById('read-book-title').textContent = bookTitle;
+            openModal('read-modal');
+        }
+        
+        document.getElementById('mark-read-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const bookId = document.getElementById('read-book-id').value;
+            const readBy = document.getElementById('read-by-name').value;
+            
+            const response = await fetch('/api/mark-read', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ book_id: bookId, read_by: readBy })
+            });
+            if (response.ok) location.reload();
+        });
+        
+        async function markUnread(bookId) {
+            if (!confirm('Mark as unread?')) return;
+            const response = await fetch('/api/mark-unread', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ book_id: bookId })
+            });
+            if (response.ok) location.reload();
+        }
+        
+        async function deleteBook(bookId, bookTitle) {
+            if (!confirm(`Delete "${bookTitle}"?`)) return;
+            const response = await fetch('/api/delete-book', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ book_id: bookId })
+            });
+            if (response.ok) location.reload();
+        }
+        
+        const searchInput = document.getElementById('search');
+        const filterGenre = document.getElementById('filter-genre');
+        const filterAddedBy = document.getElementById('filter-added-by');
+        const filterReadBy = document.getElementById('filter-read-by');
+        const sortBy = document.getElementById('sort-by');
+        
+        function filterAndSortBooks() {
+            const query = searchInput.value.toLowerCase();
+            const genre = filterGenre.value;
+            const addedBy = filterAddedBy.value;
+            const readBy = filterReadBy.value;
+            const sortOption = sortBy.value;
+            const activeChip = document.querySelector('.chip.active');
+            const readFilter = activeChip ? activeChip.dataset.filter : 'all';
+            
+            const booksGrid = document.getElementById('books-grid');
+            const books = Array.from(document.querySelectorAll('.book-card'));
+            
+            const filteredBooks = books.filter(book => {
+                const text = book.textContent.toLowerCase();
+                const bookGenres = book.dataset.genres.toLowerCase();
+                const bookAddedBy = book.dataset.addedBy;
+                const bookReadBy = book.dataset.readBy;
+                const isRead = book.dataset.read === 'true';
+                
+                if (query && !text.includes(query)) return false;
+                if (genre && !bookGenres.includes(genre.toLowerCase())) return false;
+                if (addedBy && bookAddedBy !== addedBy) return false;
+                if (readBy && bookReadBy !== readBy) return false;
+                if (readFilter === 'read' && !isRead) return false;
+                if (readFilter === 'unread' && isRead) return false;
+                
+                return true;
+            });
+            
+            filteredBooks.sort((a, b) => {
+                switch(sortOption) {
+                    case 'date-desc': return new Date(b.dataset.date) - new Date(a.dataset.date);
+                    case 'date-asc': return new Date(a.dataset.date) - new Date(b.dataset.date);
+                    case 'title-asc': return a.dataset.title.localeCompare(b.dataset.title);
+                    case 'title-desc': return b.dataset.title.localeCompare(a.dataset.title);
+                    case 'author-asc': return a.dataset.author.localeCompare(b.dataset.author);
+                    case 'rating-desc': return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
+                    case 'rating-asc': return parseFloat(a.dataset.rating) - parseFloat(b.dataset.rating);
+                    default: return 0;
+                }
+            });
+            
+            books.forEach(book => book.style.display = 'none');
+            filteredBooks.forEach(book => {
+                book.style.display = 'block';
+                booksGrid.appendChild(book);
+            });
+        }
+        
+        function clearAllFilters() {
+            searchInput.value = '';
+            filterGenre.selectedIndex = 0;
+            filterAddedBy.selectedIndex = 0;
+            filterReadBy.selectedIndex = 0;
+            sortBy.selectedIndex = 0;
+            document.querySelectorAll('.chip').forEach(chip => {
+                chip.classList.remove('active');
+                if (chip.dataset.filter === 'all') chip.classList.add('active');
+            });
+            filterAndSortBooks();
+        }
+        
+        searchInput.addEventListener('input', filterAndSortBooks);
+        filterGenre.addEventListener('change', filterAndSortBooks);
+        filterAddedBy.addEventListener('change', filterAndSortBooks);
+        filterReadBy.addEventListener('change', filterAndSortBooks);
+        sortBy.addEventListener('change', filterAndSortBooks);
+        
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                filterAndSortBooks();
+            });
+        });
+        
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+        });
+        
+        function updateUserName() {
+            const savedName = localStorage.getItem('bookTrackerUserName');
+            if (savedName) {
+                document.getElementById('current-user-name').textContent = savedName;
+                document.getElementById('user-name').value = savedName;
+                document.getElementById('read-by-name').value = savedName;
+                document.getElementById('profile-name').value = savedName;
+            }
+        }
+        
+        updateUserName();
+        
+        document.getElementById('profile-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('profile-name').value.trim();
+            if (name) {
+                localStorage.setItem('bookTrackerUserName', name);
+                updateUserName();
+                closeModal('profile-modal');
+            }
+        });
+        
+        // Initialize thumbs up on page load
+        window.addEventListener('DOMContentLoaded', initializeThumbsUp);
+    </script>
+</body>
+</html>
+"""
+
+# ============================================================================
+# ROUTES
+# ============================================================================
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page."""
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == FAMILY_PASSWORD:
+            session['logged_in'] = True
+            session.permanent = True
+            return redirect(url_for('index'))
+        else:
+            return render_template_string(LOGIN_TEMPLATE, error='Incorrect password. Try again!')
+    
+    return render_template_string(LOGIN_TEMPLATE)
+
+@app.route('/logout')
+def logout():
+    """Logout route."""
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/')
+@login_required
+def index():
+    """Home page showing all books."""
+    books = db.get_all_books()
+    stats = db.get_stats()
+    
+    for book in books:
+        book.thumbnail = get_book_thumbnail(book.image_path)
+        book.formatted_date = format_publish_date(book.date_published)
+    
+    all_genres = get_all_genres(books)
+    
+    return render_template_string(PAGE_TEMPLATE, books=books, stats=stats, all_genres=all_genres)
+
+@app.route('/api/books')
+@login_required
+def api_books():
+    """API endpoint to get all books as JSON."""
+    books = db.get_all_books()
+    return jsonify([book.to_dict() for book in books])
+
+@app.route('/api/stats')
+@login_required
+def api_stats():
+    """API endpoint to get library statistics."""
+    return jsonify(db.get_stats())
+
+@app.route('/api/search')
+@login_required
+def api_search():
+    """API endpoint to search books."""
+    query = request.args.get('q', '')
+    if not query:
+        return jsonify([])
+    
+    books = db.search_books(query)
+    return jsonify([book.to_dict() for book in books])
+
+@app.route('/api/add-book', methods=['POST'])
+@login_required
+def api_add_book():
+    """API endpoint to add a new book from uploaded image."""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'error': 'No image provided'})
+        
+        file = request.files['image']
+        user_name = request.form.get('user_name', 'Unknown')
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'})
+        
+        temp_dir = tempfile.mkdtemp()
+        temp_path = Path(temp_dir) / file.filename
+        file.save(str(temp_path))
+        
+        processor = ImageProcessor()
+        book_info = processor.extract_book_info(str(temp_path))
+        
+        if not book_info:
+            return jsonify({'success': False, 'error': 'Failed to extract book information'})
+        
+        enricher = BookEnricher()
+        enriched_data = enricher.enrich_book_data(book_info, use_goodreads=True)
+        enriched_data['added_by'] = user_name
+        
+        book = db.add_book(enriched_data)
+        
+        return jsonify({'success': True, 'book_id': book.id})
+        
+    except Exception as e:
+        print(f"Error adding book: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/mark-read', methods=['POST'])
+@login_required
+def api_mark_read():
+    """API endpoint to mark a book as read."""
+    try:
+        data = request.get_json()
+        book_id = data.get('book_id')
+        read_by = data.get('read_by', 'Unknown')
+        
+        book = db.mark_as_read(int(book_id), read_by)
+        
+        if book:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Book not found'})
+            
+    except Exception as e:
+        print(f"Error marking as read: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/mark-unread', methods=['POST'])
+@login_required
+def api_mark_unread():
+    """API endpoint to mark a book as unread."""
+    try:
+        data = request.get_json()
+        book_id = data.get('book_id')
+        
+        book = db.mark_as_unread(int(book_id))
+        
+        if book:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Book not found'})
+            
+    except Exception as e:
+        print(f"Error marking as unread: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/delete-book', methods=['POST'])
+@login_required
+def api_delete_book():
+    """API endpoint to delete a book."""
+    try:
+        data = request.get_json()
+        book_id = data.get('book_id')
+        
+        success = db.delete_book(int(book_id))
+        
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Book not found'})
+            
+    except Exception as e:
+        print(f"Error deleting book: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+if __name__ == '__main__':
+    print("🚀 Starting Book Tracker Web Interface...")
+    print("📚 Booky McBookerton!")
+    print("🔒 Password:", FAMILY_PASSWORD)
+    print("🌐 Access at: http://localhost:5001")
+    print("\nPress Ctrl+C to stop")
+    
+    port = int(os.environ.get('PORT', 5001))
+    app.run(debug=False, host='0.0.0.0', port=port)
