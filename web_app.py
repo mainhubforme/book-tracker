@@ -621,7 +621,7 @@ PAGE_TEMPLATE = """
         .books-grid.compact .avatar-circle {
             width: 20px;
             height: 20px;
-            font-size: 0.6em;
+            font-size: 0.75em;
         }
         
         .books-grid.list {
@@ -886,7 +886,7 @@ PAGE_TEMPLATE = """
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.7em;
+            font-size: 0.9em;
             font-weight: 600;
             color: white;
             border: 2px solid var(--surface);
@@ -987,7 +987,7 @@ PAGE_TEMPLATE = """
         .thumbs-up-avatars .avatar-circle {
             width: 20px;
             height: 20px;
-            font-size: 0.6em;
+            font-size: 0.7em;
             margin-left: -8px;
             border: 2px solid var(--surface);
         }
@@ -1049,6 +1049,28 @@ PAGE_TEMPLATE = """
             width: 100%;
             max-height: 90vh;
             overflow-y: auto;
+        }
+        
+        .emoji-option {
+            background: var(--surface-light);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 2em;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .emoji-option:hover {
+            transform: scale(1.1);
+            border-color: var(--primary);
+        }
+        
+        .emoji-option.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
         }
         
         .modal-header {
@@ -1473,7 +1495,7 @@ PAGE_TEMPLATE = """
                                     {% set user_color = colors[hash_val] %}
                                 {% endif %}
                                 <div class="avatar-circle" style="background-color: {{ user_color }};">
-                                    {{ book.added_by[0].upper() if book.added_by else '?' }}
+                                    <span class="user-avatar-emoji" data-user="{{ book.added_by }}">👤</span>
                                 </div>
                                 <span class="avatar-label">{{ book.added_by or 'Unknown' }}</span>
                             </div>
@@ -1576,7 +1598,49 @@ PAGE_TEMPLATE = """
                     <input type="text" id="profile-name" placeholder="Enter your name" required>
                 </div>
                 <div class="form-group">
-                    <button type="submit" class="btn camera-btn">Save Name</button>
+                    <label>Choose Your Avatar</label>
+                    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 10px;">
+                        <div class="emoji-option" data-emoji="🐶">🐶</div>
+                        <div class="emoji-option" data-emoji="🐱">🐱</div>
+                        <div class="emoji-option" data-emoji="🐭">🐭</div>
+                        <div class="emoji-option" data-emoji="🐹">🐹</div>
+                        <div class="emoji-option" data-emoji="🐰">🐰</div>
+                        <div class="emoji-option" data-emoji="🦊">🦊</div>
+                        <div class="emoji-option" data-emoji="🐻">🐻</div>
+                        <div class="emoji-option" data-emoji="🐼">🐼</div>
+                        <div class="emoji-option" data-emoji="🐨">🐨</div>
+                        <div class="emoji-option" data-emoji="🐯">🐯</div>
+                        <div class="emoji-option" data-emoji="🦁">🦁</div>
+                        <div class="emoji-option" data-emoji="🐮">🐮</div>
+                        <div class="emoji-option" data-emoji="🐷">🐷</div>
+                        <div class="emoji-option" data-emoji="🐸">🐸</div>
+                        <div class="emoji-option" data-emoji="🐵">🐵</div>
+                        <div class="emoji-option" data-emoji="🐔">🐔</div>
+                        <div class="emoji-option" data-emoji="🐧">🐧</div>
+                        <div class="emoji-option" data-emoji="🐦">🐦</div>
+                        <div class="emoji-option" data-emoji="🐤">🐤</div>
+                        <div class="emoji-option" data-emoji="🦄">🦄</div>
+                        <div class="emoji-option" data-emoji="🐝">🐝</div>
+                        <div class="emoji-option" data-emoji="🦋">🦋</div>
+                        <div class="emoji-option" data-emoji="🐌">🐌</div>
+                        <div class="emoji-option" data-emoji="🐙">🐙</div>
+                        <div class="emoji-option" data-emoji="🦀">🦀</div>
+                        <div class="emoji-option" data-emoji="🐠">🐠</div>
+                        <div class="emoji-option" data-emoji="🐡">🐡</div>
+                        <div class="emoji-option" data-emoji="🦆">🦆</div>
+                        <div class="emoji-option" data-emoji="🦉">🦉</div>
+                        <div class="emoji-option" data-emoji="🦇">🦇</div>
+                        <div class="emoji-option" data-emoji="🐺">🐺</div>
+                        <div class="emoji-option" data-emoji="🦝">🦝</div>
+                        <div class="emoji-option" data-emoji="🦘">🦘</div>
+                        <div class="emoji-option" data-emoji="🦙">🦙</div>
+                        <div class="emoji-option" data-emoji="🦒">🦒</div>
+                        <div class="emoji-option" data-emoji="🦓">🦓</div>
+                    </div>
+                    <input type="hidden" id="profile-emoji" value="👤">
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn camera-btn">Save Profile</button>
                 </div>
             </form>
         </div>
@@ -1585,8 +1649,20 @@ PAGE_TEMPLATE = """
     <button class="fab" onclick="openModal('add-modal')">+</button>
     
     <script>
+        // User avatars storage
+        let userAvatars = JSON.parse(localStorage.getItem('bookTrackerUserAvatars') || '{}');
+        
         // Thumbs up storage
         let thumbsUpData = JSON.parse(localStorage.getItem('bookThumbsUp') || '{}');
+        
+        function getUserAvatar(name) {
+            return userAvatars[name] || '👤';
+        }
+        
+        function setUserAvatar(name, emoji) {
+            userAvatars[name] = emoji;
+            localStorage.setItem('bookTrackerUserAvatars', JSON.stringify(userAvatars));
+        }
         
         function getAvatarColor(name) {
             if (!name) return '#6366f1';
@@ -1645,7 +1721,7 @@ PAGE_TEMPLATE = """
                 const avatar = document.createElement('div');
                 avatar.className = 'avatar-circle';
                 avatar.style.backgroundColor = getAvatarColor(user);
-                avatar.textContent = user[0].toUpperCase();
+                avatar.textContent = getUserAvatar(user);
                 avatar.title = user;
                 avatars.appendChild(avatar);
             });
@@ -1987,13 +2063,51 @@ PAGE_TEMPLATE = """
         
         function updateUserName() {
             const savedName = localStorage.getItem('bookTrackerUserName');
+            const savedEmoji = localStorage.getItem('bookTrackerUserEmoji') || '👤';
             if (savedName) {
                 document.getElementById('current-user-name').textContent = savedName;
                 document.getElementById('user-name').value = savedName;
                 document.getElementById('read-by-name').value = savedName;
                 document.getElementById('profile-name').value = savedName;
+                
+                // Set avatar emoji
+                if (!userAvatars[savedName]) {
+                    userAvatars[savedName] = savedEmoji;
+                }
             }
+            
+            // Update emoji selection
+            const currentEmoji = localStorage.getItem('bookTrackerUserEmoji') || '👤';
+            document.getElementById('profile-emoji').value = currentEmoji;
+            document.querySelectorAll('.emoji-option').forEach(opt => {
+                if (opt.dataset.emoji === currentEmoji) {
+                    opt.classList.add('selected');
+                } else {
+                    opt.classList.remove('selected');
+                }
+            });
+            
+            // Update all avatar displays on page
+            updateAllAvatarsOnPage();
         }
+        
+        function updateAllAvatarsOnPage() {
+            document.querySelectorAll('.user-avatar-emoji').forEach(el => {
+                const userName = el.dataset.user;
+                if (userName) {
+                    el.textContent = getUserAvatar(userName);
+                }
+            });
+        }
+        
+        // Emoji selection
+        document.querySelectorAll('.emoji-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.emoji-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                document.getElementById('profile-emoji').value = this.dataset.emoji;
+            });
+        });
         
         updateUserName();
         
@@ -2003,10 +2117,14 @@ PAGE_TEMPLATE = """
             profileForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const name = document.getElementById('profile-name').value.trim();
+                const emoji = document.getElementById('profile-emoji').value;
                 if (name) {
                     localStorage.setItem('bookTrackerUserName', name);
+                    localStorage.setItem('bookTrackerUserEmoji', emoji);
+                    setUserAvatar(name, emoji);
                     updateUserName();
                     closeModal('profile-modal');
+                    updateAllAvatarsOnPage();
                 }
             });
         }
