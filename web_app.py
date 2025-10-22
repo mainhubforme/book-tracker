@@ -1309,7 +1309,7 @@ PAGE_TEMPLATE = """
                 <h1>📚 Booky McBookerton</h1>
                 <div class="header-actions">
                     <div class="user-badge" onclick="openModal('profile-modal')" id="current-user-badge">
-                        👤 <span id="current-user-name">Set Your Name</span>
+                        <span id="current-user-emoji">👤</span> <span id="current-user-name">Set Your Name</span>
                     </div>
                     <a href="/logout" class="logout-btn">
                         🚪 Logout
@@ -2070,6 +2070,12 @@ PAGE_TEMPLATE = """
                 document.getElementById('read-by-name').value = savedName;
                 document.getElementById('profile-name').value = savedName;
                 
+                // Update header emoji
+                const headerEmoji = document.getElementById('current-user-emoji');
+                if (headerEmoji) {
+                    headerEmoji.textContent = savedEmoji;
+                }
+                
                 // Set avatar emoji
                 if (!userAvatars[savedName]) {
                     userAvatars[savedName] = savedEmoji;
@@ -2122,6 +2128,13 @@ PAGE_TEMPLATE = """
                     localStorage.setItem('bookTrackerUserName', name);
                     localStorage.setItem('bookTrackerUserEmoji', emoji);
                     setUserAvatar(name, emoji);
+                    
+                    // Update header emoji immediately
+                    const headerEmoji = document.getElementById('current-user-emoji');
+                    if (headerEmoji) {
+                        headerEmoji.textContent = emoji;
+                    }
+                    
                     updateUserName();
                     closeModal('profile-modal');
                     updateAllAvatarsOnPage();
