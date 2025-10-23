@@ -1016,4 +1016,4 @@ def main():
         show_stats(db)
 
 if __name__ == '__main__':
-    main()book
+    main()
