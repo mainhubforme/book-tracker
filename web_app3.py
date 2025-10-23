@@ -909,6 +909,30 @@ PAGE_TEMPLATE = """
                         <div class="emoji-option" data-emoji="🐯">🐯</div>
                         <div class="emoji-option" data-emoji="🦁">🦁</div>
                         <div class="emoji-option" data-emoji="🐮">🐮</div>
+                        <div class="emoji-option" data-emoji="🐷">🐷</div>
+                        <div class="emoji-option" data-emoji="🐸">🐸</div>
+                        <div class="emoji-option" data-emoji="🐵">🐵</div>
+                        <div class="emoji-option" data-emoji="🐔">🐔</div>
+                        <div class="emoji-option" data-emoji="🐧">🐧</div>
+                        <div class="emoji-option" data-emoji="🐦">🐦</div>
+                        <div class="emoji-option" data-emoji="🐤">🐤</div>
+                        <div class="emoji-option" data-emoji="🦄">🦄</div>
+                        <div class="emoji-option" data-emoji="🐝">🐝</div>
+                        <div class="emoji-option" data-emoji="🦋">🦋</div>
+                        <div class="emoji-option" data-emoji="🐌">🐌</div>
+                        <div class="emoji-option" data-emoji="🐙">🐙</div>
+                        <div class="emoji-option" data-emoji="🦀">🦀</div>
+                        <div class="emoji-option" data-emoji="🐠">🐠</div>
+                        <div class="emoji-option" data-emoji="🐡">🐡</div>
+                        <div class="emoji-option" data-emoji="🦆">🦆</div>
+                        <div class="emoji-option" data-emoji="🦉">🦉</div>
+                        <div class="emoji-option" data-emoji="🦇">🦇</div>
+                        <div class="emoji-option" data-emoji="🐺">🐺</div>
+                        <div class="emoji-option" data-emoji="🦝">🦝</div>
+                        <div class="emoji-option" data-emoji="🦘">🦘</div>
+                        <div class="emoji-option" data-emoji="🦙">🦙</div>
+                        <div class="emoji-option" data-emoji="🦒">🦒</div>
+                        <div class="emoji-option" data-emoji="🦓">🦓</div>
                     </div>
                     <input type="hidden" id="profile-emoji" value="👤">
                 </div>
