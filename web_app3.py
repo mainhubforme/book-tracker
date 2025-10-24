@@ -1289,17 +1289,33 @@ PAGE_TEMPLATE = """
             const bookId = document.getElementById('read-book-id').value;
             const readBy = document.getElementById('read-by-name').value;
             
+            console.log('Form submitted with:', { bookId, readBy });
+            
+            if (!bookId || !readBy) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
             try {
+                const payload = { 
+                    book_id: parseInt(bookId), 
+                    read_by: readBy 
+                };
+                console.log('Sending payload:', payload);
+                
                 const response = await fetch('/api/mark-read', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ book_id: parseInt(bookId), read_by: readBy })
+                    body: JSON.stringify(payload)
                 });
+                
+                console.log('Response status:', response.status);
                 
                 if (response.ok) {
                     location.reload();
                 } else {
                     const error = await response.json();
+                    console.error('Server error:', error);
                     alert('Error marking book as read: ' + (error.error || 'Unknown error'));
                 }
             } catch (error) {
