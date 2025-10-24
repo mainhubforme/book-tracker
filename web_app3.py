@@ -1,4 +1,14 @@
-#!/usr/bin/env python3
+.book-card {
+            display: flex; flex-direction: column;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; overflow: hidden;
+            transition: all 0.25s; cursor: pointer;
+        }
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            border-color: var(--primary);
+        }#!/usr/bin/env python3
 """
 Book Tracker Web Interface - Modern UI with Supabase persistence
 """
@@ -390,64 +400,107 @@ PAGE_TEMPLATE = """
             gap: 24px;
         }
         .books-grid.compact {
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
         }
-        .books-grid.list { grid-template-columns: 1fr; }
-        .book-card {
-            display: flex; flex-direction: column;
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 16px; overflow: hidden;
-            transition: all 0.25s; cursor: pointer;
+        .books-grid.compact .book-card {
+            max-height: none;
         }
-        .book-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-            border-color: var(--primary);
+        .books-grid.compact .book-thumbnail {
+            height: 200px;
+        }
+        .books-grid.compact .book-content {
+            padding: 14px;
+        }
+        .books-grid.compact .book-title {
+            font-size: 1em;
+            margin-bottom: 6px;
+        }
+        .books-grid.compact .book-author {
+            font-size: 0.9em;
+        }
+        .books-grid.compact .book-meta {
+            display: none;
+        }
+        .books-grid.compact .book-footer {
+            padding-top: 12px;
+            gap: 8px;
+        }
+        .books-grid.list { 
+            grid-template-columns: 1fr; 
         }
         .books-grid.list .book-card {
             flex-direction: row;
-            max-height: 200px;
+            max-height: 180px;
+            cursor: default;
+        }
+        .books-grid.list .book-card:hover {
+            transform: translateY(-2px);
         }
         .books-grid.list .book-thumbnail {
-            width: 150px;
-            min-width: 150px;
-            height: 200px;
+            width: 120px;
+            min-width: 120px;
+            height: 180px;
+            cursor: pointer;
         }
         .books-grid.list .book-content {
             display: flex;
             flex-direction: row;
-            gap: 20px;
-            padding: 16px 20px;
+            gap: 16px;
+            padding: 14px 16px;
         }
         .books-grid.list .book-info {
             flex: 1;
             display: flex;
             flex-direction: column;
+            min-width: 0;
+        }
+        .books-grid.list .book-title {
+            font-size: 1.1em;
+            margin-bottom: 4px;
+        }
+        .books-grid.list .book-author {
+            font-size: 0.95em;
+            margin-bottom: 6px;
         }
         .books-grid.list .book-meta {
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+            gap: 4px;
+        }
+        .books-grid.list .book-meta .badge {
+            font-size: 0.7em;
+            padding: 3px 8px;
         }
         .books-grid.list .book-footer {
-            width: 200px;
-            min-width: 200px;
+            width: 180px;
+            min-width: 180px;
             border-top: none;
             border-left: 1px solid var(--border);
-            padding-left: 20px;
+            padding-left: 16px;
             margin-top: 0;
             padding-top: 0;
         }
         .books-grid.list .book-footer-top {
             flex-direction: column;
             align-items: flex-start;
-            gap: 12px;
+            gap: 10px;
         }
         .books-grid.list .book-actions {
             flex-direction: column;
             width: 100%;
+            gap: 6px;
         }
         .books-grid.list .book-actions .btn {
             width: 100%;
             margin-right: 0;
+            padding: 8px 10px;
+            font-size: 0.8em;
+        }
+        .books-grid.list .thumbs-up-section {
+            display: none;
+        }
+        .books-grid.list #summary-container {
+            display: none;
         }
         .book-thumbnail {
             width: 100%; height: 250px;
@@ -642,36 +695,33 @@ PAGE_TEMPLATE = """
             100% { transform: rotate(360deg); }
         }
         @media (max-width: 768px) {
-            .books-grid {
+            .books-grid, .books-grid.cozy {
                 grid-template-columns: 1fr !important;
             }
             .books-grid.compact {
                 grid-template-columns: repeat(2, 1fr) !important;
+                gap: 12px;
             }
             .books-grid.compact .book-thumbnail {
-                height: 180px;
+                height: 160px;
             }
             .books-grid.compact .book-content {
-                padding: 12px;
+                padding: 10px;
             }
             .books-grid.compact .book-title {
-                font-size: 1em;
+                font-size: 0.9em;
             }
             .books-grid.list .book-card {
-                flex-direction: row;
-                max-height: 160px;
+                flex-direction: column;
+                max-height: none;
             }
             .books-grid.list .book-thumbnail {
-                width: 100px;
-                min-width: 100px;
-                height: 160px;
+                width: 100%;
+                height: 200px;
             }
             .books-grid.list .book-content {
                 flex-direction: column;
-                padding: 12px;
-            }
-            .books-grid.list .book-title {
-                font-size: 0.95em;
+                padding: 14px;
             }
             .books-grid.list .book-footer {
                 width: 100%;
@@ -679,15 +729,21 @@ PAGE_TEMPLATE = """
                 border-top: 1px solid var(--border);
                 padding-left: 0;
                 padding-top: 12px;
-                margin-top: 8px;
+                margin-top: 12px;
             }
             .books-grid.list .book-footer-top {
                 flex-direction: row;
                 justify-content: space-between;
+                align-items: center;
             }
             .books-grid.list .book-actions {
                 flex-direction: row;
                 width: auto;
+                gap: 8px;
+            }
+            .books-grid.list .book-actions .btn {
+                width: auto;
+                padding: 6px 12px;
             }
         }
     </style>
@@ -731,9 +787,9 @@ PAGE_TEMPLATE = """
             <div class="controls-header">
                 <span>🔍 Filter & Sort</span>
                 <div class="controls-actions">
-                    <button class="view-density-btn active" data-density="cozy">▦</button>
+                    <button class="view-density-btn" data-density="cozy">▦</button>
                     <button class="view-density-btn" data-density="compact">▪</button>
-                    <button class="view-density-btn" data-density="list">☰</button>
+                    <button class="view-density-btn active" data-density="list">☰</button>
                     <button class="view-density-btn" onclick="clearAllFilters()" style="background: transparent;">Clear</button>
                 </div>
             </div>
@@ -780,7 +836,7 @@ PAGE_TEMPLATE = """
         </div>
         
         {% if books %}
-        <div class="books-grid cozy" id="books-grid">
+        <div class="books-grid list" id="books-grid">
             {% for book in books %}
             <div class="book-card {% if book.is_read %}read{% endif %}" 
                  data-id="{{ book.id }}"
@@ -826,9 +882,11 @@ PAGE_TEMPLATE = """
                         </span>
                         {% endif %}
                         {% if book.goodreads_score %}
-                        <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: var(--warning);">
-                            ⭐ {{ book.goodreads_score }}/5
-                        </span>
+                        <a href="https://www.goodreads.com/search?q={{ book.title|urlencode }}+{{ book.author|urlencode }}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;" onclick="event.stopPropagation();">
+                            <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: var(--warning); cursor: pointer;">
+                                ⭐ {{ book.goodreads_score }}/5
+                            </span>
+                        </a>
                         {% endif %}
                     </div>
                     
