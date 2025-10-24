@@ -140,21 +140,56 @@ def logout():
 
 @app.route('/api/mark-read', methods=['POST'])
 def mark_read():
-    body = request.get_json()
-    db.mark_read(body["book_id"], body["read_by"])
-    return jsonify({"success": True})
+    try:
+        body = request.get_json()
+        if not body:
+            return jsonify({"error": "No data provided"}), 400
+        
+        book_id = body.get("book_id")
+        read_by = body.get("read_by")
+        
+        if not book_id or not read_by:
+            return jsonify({"error": "Missing book_id or read_by"}), 400
+        
+        db.mark_as_read(book_id, read_by)  # Changed from mark_read to mark_as_read
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"Error marking book as read: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/mark-unread', methods=['POST'])
 def mark_unread():
-    body = request.get_json()
-    db.mark_unread(body["book_id"])
-    return jsonify({"success": True})
+    try:
+        body = request.get_json()
+        if not body:
+            return jsonify({"error": "No data provided"}), 400
+        
+        book_id = body.get("book_id")
+        if not book_id:
+            return jsonify({"error": "Missing book_id"}), 400
+        
+        db.mark_as_unread(book_id)  # Changed from mark_unread to mark_as_unread
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"Error marking book as unread: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/delete-book', methods=['POST'])
 def delete_book():
-    body = request.get_json()
-    db.delete_book(body["book_id"])
-    return jsonify({"success": True})
+    try:
+        body = request.get_json()
+        if not body:
+            return jsonify({"error": "No data provided"}), 400
+        
+        book_id = body.get("book_id")
+        if not book_id:
+            return jsonify({"error": "Missing book_id"}), 400
+        
+        db.delete_book(book_id)
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"Error deleting book: {e}")
+        return jsonify({"error": str(e)}), 500
 
 LOGIN_TEMPLATE = """
 <!DOCTYPE html>
@@ -607,26 +642,52 @@ PAGE_TEMPLATE = """
             100% { transform: rotate(360deg); }
         }
         @media (max-width: 768px) {
-            .books-grid, .books-grid.compact, .books-grid.list {
+            .books-grid {
                 grid-template-columns: 1fr !important;
             }
+            .books-grid.compact {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+            .books-grid.compact .book-thumbnail {
+                height: 180px;
+            }
+            .books-grid.compact .book-content {
+                padding: 12px;
+            }
+            .books-grid.compact .book-title {
+                font-size: 1em;
+            }
             .books-grid.list .book-card {
-                flex-direction: column;
-                max-height: none;
+                flex-direction: row;
+                max-height: 160px;
             }
             .books-grid.list .book-thumbnail {
-                width: 100%;
-                height: 250px;
+                width: 100px;
+                min-width: 100px;
+                height: 160px;
             }
             .books-grid.list .book-content {
                 flex-direction: column;
+                padding: 12px;
+            }
+            .books-grid.list .book-title {
+                font-size: 0.95em;
             }
             .books-grid.list .book-footer {
                 width: 100%;
                 border-left: none;
                 border-top: 1px solid var(--border);
                 padding-left: 0;
-                padding-top: 16px;
+                padding-top: 12px;
+                margin-top: 8px;
+            }
+            .books-grid.list .book-footer-top {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+            .books-grid.list .book-actions {
+                flex-direction: row;
+                width: auto;
             }
         }
     </style>
@@ -932,7 +993,7 @@ PAGE_TEMPLATE = """
                         <div class="emoji-option" data-emoji="🦘">🦘</div>
                         <div class="emoji-option" data-emoji="🦙">🦙</div>
                         <div class="emoji-option" data-emoji="🦒">🦒</div>
-                        <div class="emoji-option" data-emoji="🦓">🦓</div>
+                        <div class="emoji-option" data-emoji="🦔">🦔</div>
                     </div>
                     <input type="hidden" id="profile-emoji" value="👤">
                 </div>
@@ -1227,32 +1288,63 @@ PAGE_TEMPLATE = """
             const bookId = document.getElementById('read-book-id').value;
             const readBy = document.getElementById('read-by-name').value;
             
-            const response = await fetch('/api/mark-read', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ book_id: bookId, read_by: readBy })
-            });
-            if (response.ok) location.reload();
+            try {
+                const response = await fetch('/api/mark-read', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ book_id: parseInt(bookId), read_by: readBy })
+                });
+                
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Error marking book as read: ' + (error.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to mark book as read. Please try again.');
+            }
         });
         
         async function markUnread(bookId) {
             if (!confirm('Mark as unread?')) return;
-            const response = await fetch('/api/mark-unread', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ book_id: bookId })
-            });
-            if (response.ok) location.reload();
+            try {
+                const response = await fetch('/api/mark-unread', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ book_id: parseInt(bookId) })
+                });
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Error marking book as unread: ' + (error.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to mark book as unread. Please try again.');
+            }
         }
         
         async function deleteBook(bookId, bookTitle) {
             if (!confirm('Delete "' + bookTitle + '"?')) return;
-            const response = await fetch('/api/delete-book', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ book_id: bookId })
-            });
-            if (response.ok) location.reload();
+            try {
+                const response = await fetch('/api/delete-book', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ book_id: parseInt(bookId) })
+                });
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Error deleting book: ' + (error.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to delete book. Please try again.');
+            }
         }
         
         function filterAndSortBooks() {
