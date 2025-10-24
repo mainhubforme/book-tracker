@@ -1298,7 +1298,7 @@ PAGE_TEMPLATE = """
             
             try {
                 const payload = { 
-                    book_id: parseInt(bookId), 
+                    book_id: bookId,  // Don't parse UUID as integer!
                     read_by: readBy 
                 };
                 console.log('Sending payload:', payload);
@@ -1330,7 +1330,7 @@ PAGE_TEMPLATE = """
                 const response = await fetch('/api/mark-unread', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ book_id: parseInt(bookId) })
+                    body: JSON.stringify({ book_id: bookId })  // Keep as string UUID
                 });
                 if (response.ok) {
                     location.reload();
@@ -1350,7 +1350,7 @@ PAGE_TEMPLATE = """
                 const response = await fetch('/api/delete-book', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ book_id: parseInt(bookId) })
+                    body: JSON.stringify({ book_id: bookId })  // Keep as string UUID
                 });
                 if (response.ok) {
                     location.reload();
