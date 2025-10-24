@@ -863,11 +863,11 @@ PAGE_TEMPLATE = """
                             </div>
                             <div class="book-actions">
                                 {% if book.is_read %}
-                                <button class="btn btn-unread" onclick="markUnread('{{ book.id }}')">Unread</button>
+                                <button class="btn btn-unread" onclick="event.stopPropagation(); markUnread('{{ book.id }}')">Unread</button>
                                 {% else %}
-                                <button class="btn btn-read" onclick="showReadModal('{{ book.id }}', '{{ book.title|replace("'", "\\'") }}')">Read</button>
+                                <button class="btn btn-read" onclick="event.stopPropagation(); showReadModal('{{ book.id }}', '{{ book.title|replace("'", "\\'") }}')">Read</button>
                                 {% endif %}
-                                <button class="btn btn-delete" onclick="deleteBook('{{ book.id }}', '{{ book.title|replace("'", "\\'") }}')">Delete</button>
+                                <button class="btn btn-delete" onclick="event.stopPropagation(); deleteBook('{{ book.id }}', '{{ book.title|replace("'", "\\'") }}')">Delete</button>
                             </div>
                         </div>
                         
@@ -1278,6 +1278,7 @@ PAGE_TEMPLATE = """
         });
         
         function showReadModal(bookId, bookTitle) {
+            event.stopPropagation(); // Stop card expansion
             document.getElementById('read-book-id').value = bookId;
             document.getElementById('read-book-title').textContent = bookTitle;
             openModal('read-modal');
