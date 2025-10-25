@@ -411,7 +411,14 @@ PAGE_TEMPLATE = """
             font-size: 0.9em;
         }
         .books-grid.compact .book-meta {
-            display: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .books-grid.compact .book-meta .badge {
+            font-size: 0.7em;
+            padding: 3px 8px;
         }
         .books-grid.compact .book-footer {
             padding-top: 12px;
@@ -727,6 +734,19 @@ PAGE_TEMPLATE = """
             100% { transform: rotate(360deg); }
         }
         @media (max-width: 768px) {
+            .stats {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+            }
+            .stat-card {
+                padding: 8px;
+            }
+            .stat-number {
+                font-size: 1.4em;
+            }
+            .stat-label {
+                font-size: 0.7em;
+            }
             .books-grid, .books-grid.cozy {
                 grid-template-columns: 1fr !important;
             }
@@ -743,39 +763,8 @@ PAGE_TEMPLATE = """
             .books-grid.compact .book-title {
                 font-size: 0.9em;
             }
-            .books-grid.list .book-card {
-                flex-direction: column;
-                max-height: none;
-            }
-            .books-grid.list .book-thumbnail {
-                width: 100%;
-                height: 200px;
-            }
-            .books-grid.list .book-content {
-                flex-direction: column;
-                padding: 14px;
-            }
-            .books-grid.list .book-footer {
-                width: 100%;
-                border-left: none;
-                border-top: 1px solid var(--border);
-                padding-left: 0;
-                padding-top: 12px;
-                margin-top: 12px;
-            }
-            .books-grid.list .book-footer-top {
-                flex-direction: row;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .books-grid.list .book-actions {
-                flex-direction: row;
-                width: auto;
-                gap: 8px;
-            }
-            .books-grid.list .book-actions .btn {
-                width: auto;
-                padding: 6px 12px;
+            .view-density-btn[data-density="list"] {
+                display: none;
             }
         }
     </style>
@@ -819,9 +808,9 @@ PAGE_TEMPLATE = """
             <div class="controls-header">
                 <span>🔍 Filter & Sort</span>
                 <div class="controls-actions">
-                    <button class="view-density-btn" data-density="cozy">▦</button>
+                    <button class="view-density-btn active" data-density="cozy">▦</button>
                     <button class="view-density-btn" data-density="compact">▪</button>
-                    <button class="view-density-btn active" data-density="list">☰</button>
+                    <button class="view-density-btn" data-density="list">☰</button>
                     <button class="view-density-btn" onclick="clearAllFilters()" style="background: transparent;">Clear</button>
                 </div>
             </div>
@@ -868,7 +857,7 @@ PAGE_TEMPLATE = """
         </div>
         
         {% if books %}
-        <div class="books-grid list" id="books-grid">
+        <div class="books-grid cozy" id="books-grid">
             {% for book in books %}
             <div class="book-card {% if book.is_read %}read{% endif %}" 
                  data-id="{{ book.id }}"
