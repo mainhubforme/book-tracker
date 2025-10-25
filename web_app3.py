@@ -25,6 +25,19 @@ app.config.update(
 app.secret_key = os.environ.get('SECRET_KEY', 'change-me')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'change-me')
+
+# ✅ fix Safari session loss
+app.config.update(
+    SESSION_COOKIE_NAME="booky_session",
+    SESSION_COOKIE_SECURE=True,          # required for SameSite=None
+    SESSION_COOKIE_SAMESITE="None",      # explicitly cross-site safe
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_DOMAIN=".onrender.com",  # include the leading dot
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30)
+)
+
 db = DatabaseManager()
 def debug_session():
     print("Cookies:", request.cookies)
