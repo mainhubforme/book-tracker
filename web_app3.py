@@ -21,11 +21,11 @@ FAMILY_PASSWORD = os.environ.get("BOOK_TRACKER_PASSWORD", "bookfamily2024")
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-me")
 
-# ✅ Session config for Safari and Render
+# ✅ Fix Safari session loss and enable proper cookie handling
 app.config.update(
     SESSION_COOKIE_NAME="booky_session",
-    SESSION_COOKIE_SECURE=True,          # must be True for HTTPS
-    SESSION_COOKIE_SAMESITE="Lax",       # "Lax" keeps redirects working in Safari
+    SESSION_COOKIE_SECURE=True,          # required for HTTPS
+    SESSION_COOKIE_SAMESITE="Lax",      # cross-site safe
     SESSION_COOKIE_HTTPONLY=True,
     PERMANENT_SESSION_LIFETIME=timedelta(days=30)
 )
