@@ -21,6 +21,14 @@ app.config.update(
     SESSION_COOKIE_SECURE=True,       # required for SameSite=None
     SESSION_COOKIE_SAMESITE="None",   # keep cookies after POST/redirect
 )
+@app.route("/debug-session")
+def debug_session():
+    print("Cookies:", request.cookies)
+    print("Session:", dict(session))
+    return jsonify({
+        "cookies": request.cookies,
+        "session": dict(session)
+    })
 app.secret_key = os.environ.get('SECRET_KEY', 'change-me')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
