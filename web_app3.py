@@ -17,6 +17,10 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 FAMILY_PASSWORD = os.environ.get('BOOK_TRACKER_PASSWORD', 'bookfamily2024')
 
 app = Flask(__name__)
+app.config.update(
+    SESSION_COOKIE_SECURE=True,       # required for SameSite=None
+    SESSION_COOKIE_SAMESITE="None",   # keep cookies after POST/redirect
+)
 app.secret_key = os.environ.get('SECRET_KEY', 'change-me')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
