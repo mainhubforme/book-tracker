@@ -1,14 +1,4 @@
-.book-card {
-            display: flex; flex-direction: column;
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 16px; overflow: hidden;
-            transition: all 0.25s; cursor: pointer;
-        }
-        .book-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-            border-color: var(--primary);
-        }#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Book Tracker Web Interface - Modern UI with Supabase persistence
 """
@@ -114,7 +104,6 @@ def index():
         book['formatted_date'] = format_publish_date(book.get('date_published'))
         if book.get('image_url'):
             book['thumbnail'] = book['image_url']
-        # Convert to JSON for safe JavaScript embedding
         book['genres_json'] = json.dumps(book.get('genres', '').split(', ') if book.get('genres') else [])
 
     all_genres = get_all_genres(books)
@@ -161,7 +150,7 @@ def mark_read():
         if not book_id or not read_by:
             return jsonify({"error": "Missing book_id or read_by"}), 400
         
-        db.mark_as_read(book_id, read_by)  # Changed from mark_read to mark_as_read
+        db.mark_as_read(book_id, read_by)
         return jsonify({"success": True})
     except Exception as e:
         print(f"Error marking book as read: {e}")
@@ -178,7 +167,7 @@ def mark_unread():
         if not book_id:
             return jsonify({"error": "Missing book_id"}), 400
         
-        db.mark_as_unread(book_id)  # Changed from mark_unread to mark_as_unread
+        db.mark_as_unread(book_id)
         return jsonify({"success": True})
     except Exception as e:
         print(f"Error marking book as unread: {e}")
@@ -270,7 +259,6 @@ LOGIN_TEMPLATE = """
 </html>
 """
 
-# Now the main template with complete styling - using safe JSON for genres
 PAGE_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -501,6 +489,17 @@ PAGE_TEMPLATE = """
         }
         .books-grid.list #summary-container {
             display: none;
+        }
+        .book-card {
+            display: flex; flex-direction: column;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; overflow: hidden;
+            transition: all 0.25s; cursor: pointer;
+        }
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            border-color: var(--primary);
         }
         .book-thumbnail {
             width: 100%; height: 250px;
@@ -949,7 +948,6 @@ PAGE_TEMPLATE = """
         {% endif %}
     </div>
     
-    <!-- Modals -->
     <div class="modal" id="add-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1069,7 +1067,6 @@ PAGE_TEMPLATE = """
         let thumbsUpData = JSON.parse(localStorage.getItem('bookThumbsUp') || '{}');
         let selectedFiles = [];
         
-        // Initialize genres for each book card
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.book-card').forEach(card => {
                 const bookId = card.dataset.id;
@@ -1224,7 +1221,6 @@ PAGE_TEMPLATE = """
         }
         
         function expandCard(e, bookId) {
-            // Don't expand if clicking on interactive elements
             if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.badge-genre')) {
                 return;
             }
@@ -1233,7 +1229,6 @@ PAGE_TEMPLATE = """
             const summary = document.getElementById('summary-' + bookId);
             
             if (card && summary) {
-                // Toggle expanded state
                 if (summary.style.webkitLineClamp === '3') {
                     summary.style.webkitLineClamp = 'unset';
                     summary.style.display = 'block';
@@ -1336,7 +1331,7 @@ PAGE_TEMPLATE = """
         });
         
         function showReadModal(bookId, bookTitle) {
-            event.stopPropagation(); // Stop card expansion
+            event.stopPropagation();
             document.getElementById('read-book-id').value = bookId;
             document.getElementById('read-book-title').textContent = bookTitle;
             openModal('read-modal');
@@ -1347,8 +1342,6 @@ PAGE_TEMPLATE = """
             const bookId = document.getElementById('read-book-id').value;
             const readBy = document.getElementById('read-by-name').value;
             
-            console.log('Form submitted with:', { bookId, readBy });
-            
             if (!bookId || !readBy) {
                 alert('Please fill in all fields');
                 return;
@@ -1356,10 +1349,9 @@ PAGE_TEMPLATE = """
             
             try {
                 const payload = { 
-                    book_id: bookId,  // Don't parse UUID as integer!
+                    book_id: bookId,
                     read_by: readBy 
                 };
-                console.log('Sending payload:', payload);
                 
                 const response = await fetch('/api/mark-read', {
                     method: 'POST',
@@ -1367,13 +1359,10 @@ PAGE_TEMPLATE = """
                     body: JSON.stringify(payload)
                 });
                 
-                console.log('Response status:', response.status);
-                
                 if (response.ok) {
                     location.reload();
                 } else {
                     const error = await response.json();
-                    console.error('Server error:', error);
                     alert('Error marking book as read: ' + (error.error || 'Unknown error'));
                 }
             } catch (error) {
@@ -1388,7 +1377,7 @@ PAGE_TEMPLATE = """
                 const response = await fetch('/api/mark-unread', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ book_id: bookId })  // Keep as string UUID
+                    body: JSON.stringify({ book_id: bookId })
                 });
                 if (response.ok) {
                     location.reload();
@@ -1408,7 +1397,7 @@ PAGE_TEMPLATE = """
                 const response = await fetch('/api/delete-book', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ book_id: bookId })  // Keep as string UUID
+                    body: JSON.stringify({ book_id: bookId })
                 });
                 if (response.ok) {
                     location.reload();
