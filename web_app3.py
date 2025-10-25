@@ -33,6 +33,8 @@ app.config.update(
 # --- Debug route for cookie/session check ---
 @app.route("/debug-session")
 def debug_session():
+    print("Cookies:", request.cookies)
+    print("Session:", dict(session))
     return jsonify({
         "cookies": request.cookies,
         "session": dict(session)
@@ -40,15 +42,6 @@ def debug_session():
 
 # --- Database manager initialization ---
 db = DatabaseManager()
-# --- Database manager initialization ---
-db = DatabaseManager()
-def debug_session():
-    print("Cookies:", request.cookies)
-    print("Session:", dict(session))
-    return jsonify({
-        "cookies": request.cookies,
-        "session": dict(session)
-    })
 
 def login_required(f):
     @wraps(f)
