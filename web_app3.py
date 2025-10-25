@@ -282,22 +282,22 @@ PAGE_TEMPLATE = """
         .container { max-width: 1600px; margin: 0 auto; }
         header {
             background: var(--surface); border: 1px solid var(--border);
-            border-radius: 16px; padding: 24px; margin-bottom: 24px;
+            border-radius: 12px; padding: 16px; margin-bottom: 16px;
         }
         .header-top {
             display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
+            margin-bottom: 8px; flex-wrap: wrap; gap: 8px;
         }
         h1 {
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            font-size: 2em; font-weight: 700;
+            font-size: 1.5em; font-weight: 700;
         }
-        .header-actions { display: flex; gap: 12px; align-items: center; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
         .user-badge {
-            display: flex; align-items: center; gap: 8px;
-            background: var(--surface-light); padding: 10px 18px;
-            border-radius: 12px; font-size: 0.9em; cursor: pointer;
+            display: flex; align-items: center; gap: 6px;
+            background: var(--surface-light); padding: 6px 12px;
+            border-radius: 8px; font-size: 0.85em; cursor: pointer;
             border: 1px solid var(--border); transition: all 0.2s;
         }
         .user-badge:hover {
@@ -306,8 +306,9 @@ PAGE_TEMPLATE = """
         }
         .logout-btn {
             background: transparent; color: var(--text-secondary);
-            border: 1px solid var(--border); padding: 10px 18px;
-            border-radius: 12px; text-decoration: none; transition: all 0.2s;
+            border: 1px solid var(--border); padding: 6px 12px;
+            border-radius: 8px; text-decoration: none; transition: all 0.2s;
+            font-size: 0.85em;
         }
         .logout-btn:hover {
             background: var(--error); color: white;
@@ -315,34 +316,34 @@ PAGE_TEMPLATE = """
         }
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 16px; margin-bottom: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 12px; margin-bottom: 16px;
         }
         .stat-card {
             background: linear-gradient(135deg, var(--surface) 0%, var(--surface-light) 100%);
-            border: 1px solid var(--border); border-radius: 12px;
-            padding: 20px; text-align: center; transition: all 0.3s;
+            border: 1px solid var(--border); border-radius: 8px;
+            padding: 12px; text-align: center; transition: all 0.3s;
         }
         .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
         }
         .stat-number {
-            font-size: 2.5em; font-weight: 700;
+            font-size: 1.8em; font-weight: 700;
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
         .stat-label {
-            color: var(--text-secondary); margin-top: 8px;
-            font-size: 0.9em; font-weight: 500;
+            color: var(--text-secondary); margin-top: 4px;
+            font-size: 0.8em; font-weight: 500;
         }
         .controls {
             background: var(--surface); border: 1px solid var(--border);
-            border-radius: 16px; padding: 24px; margin-bottom: 24px;
+            border-radius: 12px; padding: 16px; margin-bottom: 20px;
         }
         .controls-header {
             display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+            margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
         }
         .controls-actions { display: flex; gap: 8px; }
         .view-density-btn {
@@ -354,9 +355,10 @@ PAGE_TEMPLATE = """
             background: var(--primary); color: white;
         }
         .search-bar input {
-            width: 100%; padding: 14px 16px;
+            width: 100%; padding: 10px 14px;
             background: var(--background); border: 1px solid var(--border);
-            border-radius: 12px; color: var(--text); margin-bottom: 20px;
+            border-radius: 8px; color: var(--text); margin-bottom: 12px;
+            font-size: 0.9em;
         }
         .search-bar input:focus {
             outline: none; border-color: var(--primary);
@@ -364,13 +366,14 @@ PAGE_TEMPLATE = """
         }
         .filters-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px; margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px; margin-bottom: 12px;
         }
         .filter-group select {
-            width: 100%; padding: 10px 12px;
+            width: 100%; padding: 8px 10px;
             background: var(--background); border: 1px solid var(--border);
             border-radius: 8px; color: var(--text); cursor: pointer;
+            font-size: 0.85em;
         }
         .filter-chips { display: flex; gap: 10px; flex-wrap: wrap; }
         .chip {
@@ -419,23 +422,25 @@ PAGE_TEMPLATE = """
         }
         .books-grid.list .book-card {
             flex-direction: row;
-            max-height: 180px;
+            max-height: none;
             cursor: default;
         }
         .books-grid.list .book-card:hover {
             transform: translateY(-2px);
         }
         .books-grid.list .book-thumbnail {
-            width: 120px;
-            min-width: 120px;
-            height: 180px;
+            width: 100px;
+            min-width: 100px;
+            height: 150px;
             cursor: pointer;
         }
         .books-grid.list .book-content {
             display: flex;
             flex-direction: row;
-            gap: 16px;
-            padding: 14px 16px;
+            gap: 20px;
+            padding: 12px 16px;
+            flex: 1;
+            min-width: 0;
         }
         .books-grid.list .book-info {
             flex: 1;
@@ -446,22 +451,36 @@ PAGE_TEMPLATE = """
         .books-grid.list .book-title {
             font-size: 1.1em;
             margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .books-grid.list .book-author {
-            font-size: 0.95em;
-            margin-bottom: 6px;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .books-grid.list .book-meta {
-            margin-bottom: 6px;
-            gap: 4px;
+            margin-bottom: 8px;
+            gap: 6px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .books-grid.list .book-meta::-webkit-scrollbar {
+            display: none;
         }
         .books-grid.list .book-meta .badge {
             font-size: 0.7em;
             padding: 3px 8px;
+            white-space: nowrap;
         }
         .books-grid.list .book-footer {
-            width: 180px;
-            min-width: 180px;
+            width: 200px;
+            min-width: 200px;
             border-top: none;
             border-left: 1px solid var(--border);
             padding-left: 16px;
@@ -487,8 +506,11 @@ PAGE_TEMPLATE = """
         .books-grid.list .thumbs-up-section {
             display: none;
         }
-        .books-grid.list #summary-container {
-            display: none;
+        .books-grid.list [id^="summary-"] {
+            display: none !important;
+        }
+        .books-grid.list .read-more-btn {
+            display: none !important;
         }
         .book-card {
             display: flex; flex-direction: column;
@@ -881,7 +903,7 @@ PAGE_TEMPLATE = """
                         </span>
                         {% endif %}
                         {% if book.goodreads_score %}
-                        <a href="https://www.goodreads.com/search?q={{ book.title|urlencode }}+{{ book.author|urlencode }}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;" onclick="event.stopPropagation();">
+                        <a href="{{ book.goodreads_url if book.goodreads_url else 'https://www.goodreads.com/search?q=' + (book.title|urlencode) + '+' + (book.author|urlencode) }}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;" onclick="event.stopPropagation();">
                             <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: var(--warning); cursor: pointer;">
                                 ⭐ {{ book.goodreads_score }}/5
                             </span>
@@ -896,10 +918,10 @@ PAGE_TEMPLATE = """
                     {% endif %}
                     
                     {% if book.summary and book.summary != 'Unknown' and book.summary != 'No summary available' %}
-                    <div id="summary-{{ book.id }}" style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.6; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                    <div id="summary-{{ book.id }}" class="book-summary" style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.6; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
                         {{ book.summary }}
                     </div>
-                    <span style="color: var(--primary); cursor: pointer; font-size: 0.85em; font-weight: 600; margin-top: 8px; display: inline-block;" 
+                    <span class="read-more-btn" style="color: var(--primary); cursor: pointer; font-size: 0.85em; font-weight: 600; margin-top: 8px; display: inline-block;" 
                           onclick="toggleSummary(event, '{{ book.id }}')">Read more</span>
                     {% endif %}
                     
