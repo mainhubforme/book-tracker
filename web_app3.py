@@ -30,7 +30,6 @@ app.config.update(
     SESSION_COOKIE_SECURE=True,          # required for SameSite=None
     SESSION_COOKIE_SAMESITE="None",      # explicitly cross-site safe
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_DOMAIN=".onrender.com",  # include the leading dot
     PERMANENT_SESSION_LIFETIME=timedelta(days=30)
 )
 
