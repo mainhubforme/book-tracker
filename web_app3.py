@@ -8,9 +8,6 @@ from datetime import timedelta
 from functools import wraps
 from flask import Flask, render_template_string, jsonify, request, session, redirect, url_for
 from dotenv import load_dotenv
-from datetime import timedelta
-from flask import Flask, jsonify, request, session
-import os
 from book_tracker3 import DatabaseManager, ImageProcessor, BookEnricher
 
 # --- Load environment ---
@@ -18,31 +15,31 @@ load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-FAMILY_PASSWORD = os.environ.get('BOOK_TRACKER_PASSWORD', 'bookfamily2024')
+FAMILY_PASSWORD = os.environ.get("BOOK_TRACKER_PASSWORD", "bookfamily2024")
 
 # --- Flask app setup ---
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'change-me')
+app.secret_key = os.environ.get("SECRET_KEY", "change-me")
 
-# ✅ Fix Safari session loss and enable proper cookie handling
+# ✅ Session config for Safari and Render
 app.config.update(
     SESSION_COOKIE_NAME="booky_session",
-    SESSION_COOKIE_SECURE=True,          # required for SameSite=None
-    SESSION_COOKIE_SAMESITE="None",      # explicitly cross-site safe
+    SESSION_COOKIE_SECURE=True,          # must be True for HTTPS
+    SESSION_COOKIE_SAMESITE="Lax",       # "Lax" keeps redirects working in Safari
     SESSION_COOKIE_HTTPONLY=True,
     PERMANENT_SESSION_LIFETIME=timedelta(days=30)
 )
 
-# --- Optional debug route for checking session state ---
+# --- Debug route for cookie/session check ---
 @app.route("/debug-session")
 def debug_session():
-    print("Cookies:", request.cookies)
-    print("Session:", dict(session))
     return jsonify({
         "cookies": request.cookies,
         "session": dict(session)
     })
 
+# --- Database manager initialization ---
+db = DatabaseManager()
 # --- Database manager initialization ---
 db = DatabaseManager()
 def debug_session():
